@@ -63,7 +63,7 @@ class ThisYearScreenViewModel(
                 currentYear = selectedYear.value.toString(),
                 years = years.map {
                     DropDownItem(
-                        title = (years.toString()).capitalized(),
+                        title = it.toString(),
                         number = it
                     )
                 },

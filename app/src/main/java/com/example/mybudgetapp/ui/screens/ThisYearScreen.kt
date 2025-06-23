@@ -156,7 +156,7 @@ fun ThisYearScreenBody(
                                 isDropDownMenuVisible = !uiState.screenItemsUiState.value.isDropDownMenuVisible
                             )
                         )
-                        updateYear(index)
+                        updateYear(uiState.years[index].number)
 
                     }
                 )
