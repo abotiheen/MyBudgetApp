@@ -2,6 +2,7 @@ package com.example.mybudgetapp.ui.widgets
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -47,8 +48,8 @@ fun BudgetBackdrop(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
+                        extendedColors.mist,
                         extendedColors.canvas,
-                        MaterialTheme.colorScheme.background,
                         MaterialTheme.colorScheme.surface,
                     )
                 )
@@ -57,13 +58,13 @@ fun BudgetBackdrop(
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 32.dp, end = 16.dp)
-                .size(220.dp)
+                .padding(top = 28.dp, end = 12.dp)
+                .size(240.dp)
                 .clip(CircleShape)
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            extendedColors.accentBlue.copy(alpha = 0.14f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
                             Color.Transparent,
                         )
                     )
@@ -72,18 +73,26 @@ fun BudgetBackdrop(
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = 8.dp, top = 120.dp)
-                .size(160.dp)
-                .clip(RoundedCornerShape(40.dp))
-                .background(extendedColors.income.copy(alpha = 0.08f))
+                .padding(start = 2.dp, top = 112.dp)
+                .size(width = 186.dp, height = 140.dp)
+                .clip(RoundedCornerShape(52.dp))
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.52f))
         )
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 140.dp)
-                .size(140.dp)
+                .padding(end = 18.dp, bottom = 136.dp)
+                .size(168.dp)
                 .clip(CircleShape)
-                .background(extendedColors.accentGold.copy(alpha = 0.10f))
+                .background(extendedColors.accentGold.copy(alpha = 0.13f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 18.dp, bottom = 220.dp)
+                .size(width = 124.dp, height = 18.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
         )
         content()
     }
@@ -102,13 +111,18 @@ fun BottomNavigationBar(
             .fillMaxWidth()
             .padding(horizontal = spacing.lg, vertical = spacing.sm),
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        shadowElevation = BudgetTheme.elevations.level4,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        shadowElevation = BudgetTheme.elevations.level3,
         tonalElevation = 0.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = BudgetTheme.extendedColors.edge,
+                    shape = RoundedCornerShape(BudgetTheme.radii.xl),
+                )
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -128,7 +142,7 @@ fun BottomNavigationBar(
                         .padding(horizontal = 4.dp)
                         .clickable(onClick = onClick),
                     color = if (selected) {
-                        MaterialTheme.colorScheme.primaryContainer
+                        MaterialTheme.colorScheme.primary
                     } else {
                         Color.Transparent
                     },
@@ -147,7 +161,7 @@ fun BottomNavigationBar(
                             },
                             contentDescription = item.title,
                             tint = if (selected) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.onPrimary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -156,7 +170,7 @@ fun BottomNavigationBar(
                             text = item.title,
                             style = MaterialTheme.typography.labelMedium,
                             color = if (selected) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.onPrimary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -200,12 +214,13 @@ fun BudgetTopAppBar(
                     modifier = Modifier.padding(start = 12.dp),
                     color = MaterialTheme.colorScheme.surface,
                     shape = CircleShape,
-                    shadowElevation = BudgetTheme.elevations.level2,
+                    shadowElevation = BudgetTheme.elevations.level1,
                 ) {
                     IconButton(onClick = navigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }

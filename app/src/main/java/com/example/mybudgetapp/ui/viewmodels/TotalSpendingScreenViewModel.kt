@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
+import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
@@ -36,11 +37,11 @@ class TotalSpendingScreenViewModel(
         itemRepository.getIncomeTransactions(year = currentYear, month = currentMonthValue)
     ) { spendingItems, totalSpending, totalIncome, incomeItems ->
         TotalSpendingUiState(
-            totalSpending = formatCurrencyIraqiDinar(totalSpending),
+            totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
             spendingItemList = spendingItems.map { it.toSpendingItem() },
             month = "${Month.of(currentMonthValue).toString().capitalized()} $currentYear",
             isIncome = isIncome,
-            totalIncome = formatCurrencyIraqiDinar(totalIncome),
+            totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
             incomeItemList = incomeItems.map { it.toSpendingItem() },
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
             isDeleteDialogVisible = isDeleteDialogVisible.value
@@ -92,7 +93,7 @@ fun BudgetTransaction.toSpendingItem(): SpendingItem =
         imagePath = picturePath,
         name = displayTitle(),
         date = transactionDate,
-        totalCost = formatCurrencyIraqiDinar(amount),
+        totalCost = formatCompactCurrencyIraqiDinar(amount),
         amountValue = amount,
         category = category,
         itemId = transactionId

@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
+import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.MonthPeriod
@@ -81,9 +82,9 @@ class ThisMonthScreenViewModel(
                 totalOthersAmount = totals.totalOthers,
                 totalSpending = formatCurrencyIraqiDinar(totals.totalSpending),
                 totalIncome = formatCurrencyIraqiDinar(totals.totalIncome),
-                totalSpendingOnFood = formatCurrencyIraqiDinar(totals.totalFood),
-                totalSpendingOnOthers = formatCurrencyIraqiDinar(totals.totalOthers),
-                totalSpendingOnTransportation = formatCurrencyIraqiDinar(totals.totalTransportation),
+                totalSpendingOnFood = formatCompactCurrencyIraqiDinar(totals.totalFood),
+                totalSpendingOnOthers = formatCompactCurrencyIraqiDinar(totals.totalOthers),
+                totalSpendingOnTransportation = formatCompactCurrencyIraqiDinar(totals.totalTransportation),
                 currentMonth = Month.of(period.month).toString().capitalized(),
                 selectedMonth = period.month,
                 selectedYear = period.year,
@@ -106,7 +107,7 @@ class ThisMonthScreenViewModel(
                         title = transaction.displayTitle(),
                         categoryKey = transaction.category,
                         category = categoryLabel(transaction.category),
-                        amount = formatCurrencyIraqiDinar(transaction.amount),
+                        amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
                     )
                 },

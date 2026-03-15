@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -30,12 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mybudgetapp.data.SpendingCategoryDisplayData
+import com.example.mybudgetapp.ui.theme.BudgetTheme
 
 @Composable
 fun SectionHeading(
@@ -45,16 +46,16 @@ fun SectionHeading(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
         )
         if (!subtitle.isNullOrBlank()) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -182,10 +183,11 @@ private fun DashboardMetricPill(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f),
             )
-            Text(
+            BudgetValueText(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
+                tone = BudgetValueTone.Card,
                 color = MaterialTheme.colorScheme.onPrimary,
+                unitLabel = "IQD",
             )
         }
     }
@@ -201,7 +203,7 @@ fun CategoryCard(
     Card(
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(6.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
@@ -222,7 +224,12 @@ fun CategoryCard(
                     modifier = Modifier
                         .size(54.dp)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(colorResource(id = item.cardColor)),
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f))
+                        .border(
+                            width = 1.dp,
+                            color = BudgetTheme.extendedColors.edge,
+                            shape = RoundedCornerShape(18.dp),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
@@ -237,21 +244,22 @@ fun CategoryCard(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(
+                    BudgetValueText(
                         text = totalSpending,
-                        style = MaterialTheme.typography.titleLarge,
+                        tone = BudgetValueTone.Card,
+                        unitLabel = "IQD",
                     )
                 }
             }
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.primaryContainer,
                 shape = CircleShape,
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
                     modifier = Modifier.padding(10.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -269,10 +277,11 @@ fun TotalIncomeSpending(
     Card(
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(5.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
         modifier = modifier
             .fillMaxWidth()
-            .height(146.dp),
+            .heightIn(min = 146.dp)
+            .wrapContentHeight(),
         onClick = navigateToTotalIncome,
     ) {
         Column(
@@ -302,9 +311,11 @@ fun TotalIncomeSpending(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
+                BudgetValueText(
                     text = total,
-                    style = MaterialTheme.typography.headlineMedium,
+                    tone = BudgetValueTone.Prominent,
+                    maxLines = 3,
+                    unitLabel = "IQD",
                 )
             }
         }

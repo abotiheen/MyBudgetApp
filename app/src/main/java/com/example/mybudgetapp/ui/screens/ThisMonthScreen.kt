@@ -1,66 +1,45 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
 import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
+import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
-import com.example.mybudgetapp.ui.viewmodels.ComparisonDirection
-import com.example.mybudgetapp.ui.viewmodels.HomeTransactionPreview
 import com.example.mybudgetapp.ui.viewmodels.MonthPeriodOption
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenViewModel
+import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.SectionHeading
@@ -98,10 +77,9 @@ fun ThisMonthScreen(
                         Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
                     }
                 },
-                shape = CircleShape,
                 modifier = Modifier.padding(BudgetTheme.spacing.lg),
-                contentColor = MaterialTheme.colorScheme.onPrimary,
                 containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -121,7 +99,6 @@ fun ThisMonthScreen(
     ) { innerPadding ->
         BudgetBackdrop(modifier = Modifier.padding(innerPadding)) {
             ThisMonthScreenBody(
-                modifier = Modifier,
                 uiState = uiState.value,
                 onPreviousPeriod = viewModel::selectPreviousPeriod,
                 onNextPeriod = viewModel::selectNextPeriod,
@@ -172,7 +149,7 @@ fun ThisMonthScreenBody(
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmount - uiState.totalSpendingAmount)
     val totalSpending = uiState.totalSpendingAmount.takeIf { it > 0 } ?: 1.0
-    val topCategory = uiState.insights.getOrNull(0)
+    val topItem = uiState.insights.getOrNull(1)
     val averageDaily = uiState.insights.getOrNull(3)
 
     LazyColumn(
@@ -186,14 +163,13 @@ fun ThisMonthScreenBody(
         verticalArrangement = Arrangement.spacedBy(spacing.lg),
     ) {
         item {
-            MonthlyHomeHeader(
-                periodLabel = uiState.periodLabel,
-                onOpenYear = navigateToThisYearScreen,
-            )
-        }
-        item {
-            MonthPeriodNavigatorCard(
-                label = uiState.periodLabel,
+            DashboardCommandDeck(
+                title = "This month",
+                subtitle = "A lighter overview focused on balance, latest activity, and the three spending categories that matter.",
+                currentViewLabel = "Month",
+                alternateViewLabel = "Year",
+                onOpenAlternateView = navigateToThisYearScreen,
+                selectedPeriodLabel = uiState.periodLabel,
                 canNavigatePrevious = uiState.canNavigatePrevious,
                 canNavigateNext = uiState.canNavigateNext,
                 onPrevious = onPreviousPeriod,
@@ -202,704 +178,101 @@ fun ThisMonthScreenBody(
             )
         }
         item {
-            MonthlySnapshotHeroCard(
+            DashboardBalanceHero(
                 periodLabel = uiState.periodLabel,
-                isCurrentPeriod = uiState.isCurrentPeriod,
-                netBalance = netBalance,
-                income = uiState.totalIncome,
-                spending = uiState.totalSpending,
-                onOpenInsights = { navigateToInsights(uiState.selectedMonth, uiState.selectedYear) },
+                balanceLabel = "Working balance",
+                balanceValue = netBalance,
+                statusLabel = if (uiState.isCurrentPeriod) "Live month" else "Archived month",
+                incomeValue = uiState.totalIncome,
+                spendingValue = uiState.totalSpending,
+                onOpenIncome = {
+                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, true)
+                },
+                onOpenSpending = {
+                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
+                },
+                onOpenInsights = {
+                    navigateToInsights(uiState.selectedMonth, uiState.selectedYear)
+                },
             )
         }
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            ) {
-                OverviewMetricCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Income",
-                    value = uiState.totalIncome,
-                    subtitle = "Cash in this month",
-                    accent = BudgetTheme.extendedColors.income,
-                    icon = R.drawable.baseline_attach_money_24,
-                    onClick = {
-                        navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, true)
-                    },
-                )
-                OverviewMetricCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Spent",
-                    value = uiState.totalSpending,
-                    subtitle = "Cash out this month",
-                    accent = BudgetTheme.extendedColors.danger,
-                    icon = R.drawable.baseline_money_off_24,
-                    onClick = {
-                        navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
-                    },
-                )
-            }
+            DashboardQuickStatsCard(
+                stats = listOf(
+                    DashboardQuickStat(
+                        label = "Top item",
+                        value = topItem?.subtitle ?: "No item yet",
+                        note = topItem?.value ?: formatCompactCurrencyIraqiDinar(0.0),
+                        highlight = BudgetTheme.extendedColors.food,
+                        noteTone = BudgetValueTone.Compact,
+                        noteUnitLabel = "IQD",
+                    ),
+                    DashboardQuickStat(
+                        label = "Daily average",
+                        value = averageDaily?.value ?: formatCompactCurrencyIraqiDinar(0.0),
+                        note = averageDaily?.subtitle ?: "Across the month",
+                        highlight = BudgetTheme.extendedColors.transit,
+                        valueTone = BudgetValueTone.Card,
+                        valueUnitLabel = "IQD",
+                    ),
+                ),
+            )
         }
         item {
-            MonthlySignalCard(
-                comparisonTitle = uiState.comparison.title,
-                comparisonSummary = uiState.comparison.summary,
-                comparisonDirection = uiState.comparison.direction,
-                topCategory = topCategory?.value ?: "None",
-                topCategoryCaption = topCategory?.subtitle ?: "No category leader yet",
-                averageDaily = averageDaily?.value ?: formatCurrencyIraqiDinar(0.0),
+            DashboardActivityCard(
+                title = "Recent activity",
+                subtitle = "The latest entries for this month, without leaving the overview.",
+                items = uiState.recentTransactions,
+                onViewAll = {
+                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
+                },
+            )
+        }
+        item {
+            DashboardLanesCard(
+                title = "Spending categories",
+                subtitle = "Open a category to inspect every entry behind the total.",
+                lanes = listOf(
+                    DashboardLaneUi(
+                        label = stringResource(id = SpendingCategoryDisplayObject.items[0].title),
+                        amount = uiState.totalSpendingOnFood,
+                        progress = (uiState.totalFoodAmount / totalSpending).toFloat().coerceIn(0f, 1f),
+                        accent = BudgetTheme.extendedColors.food,
+                        icon = SpendingCategoryDisplayObject.items[0].spendingIcon,
+                        onClick = {
+                            navigateToSpendingOnCategory("food", uiState.selectedMonth, uiState.selectedYear)
+                        },
+                    ),
+                    DashboardLaneUi(
+                        label = stringResource(id = SpendingCategoryDisplayObject.items[1].title),
+                        amount = uiState.totalSpendingOnTransportation,
+                        progress = (uiState.totalTransportationAmount / totalSpending).toFloat().coerceIn(0f, 1f),
+                        accent = BudgetTheme.extendedColors.transit,
+                        icon = SpendingCategoryDisplayObject.items[1].spendingIcon,
+                        onClick = {
+                            navigateToSpendingOnCategory("transportation", uiState.selectedMonth, uiState.selectedYear)
+                        },
+                    ),
+                    DashboardLaneUi(
+                        label = stringResource(id = SpendingCategoryDisplayObject.items[2].title),
+                        amount = uiState.totalSpendingOnOthers,
+                        progress = (uiState.totalOthersAmount / totalSpending).toFloat().coerceIn(0f, 1f),
+                        accent = BudgetTheme.extendedColors.others,
+                        icon = SpendingCategoryDisplayObject.items[2].spendingIcon,
+                        onClick = {
+                            navigateToSpendingOnCategory("others", uiState.selectedMonth, uiState.selectedYear)
+                        },
+                    ),
+                ),
             )
         }
         item {
             TrendChartCard(
-                title = "Daily spending rhythm",
-                subtitle = "Spot heavy days fast instead of scanning a long transaction feed.",
+                title = "Daily rhythm",
+                subtitle = "See the heavy days first, then decide whether the feed needs a deeper look.",
                 points = uiState.spendingTrend,
             )
         }
-        item {
-            SectionHeading(
-                title = "Category spend",
-                subtitle = "Three stronger entry points with clearer visual weight.",
-            )
-        }
-        item {
-            CategoryBreakdownCard(
-                label = stringResource(id = SpendingCategoryDisplayObject.items[0].title),
-                amount = uiState.totalSpendingOnFood,
-                progress = (uiState.totalFoodAmount / totalSpending).toFloat().coerceIn(0f, 1f),
-                accent = BudgetTheme.extendedColors.food,
-                icon = SpendingCategoryDisplayObject.items[0].spendingIcon,
-                onClick = {
-                    navigateToSpendingOnCategory("food", uiState.selectedMonth, uiState.selectedYear)
-                },
-            )
-        }
-        item {
-            CategoryBreakdownCard(
-                label = stringResource(id = SpendingCategoryDisplayObject.items[1].title),
-                amount = uiState.totalSpendingOnTransportation,
-                progress = (uiState.totalTransportationAmount / totalSpending).toFloat().coerceIn(0f, 1f),
-                accent = BudgetTheme.extendedColors.transit,
-                icon = SpendingCategoryDisplayObject.items[1].spendingIcon,
-                onClick = {
-                    navigateToSpendingOnCategory("transportation", uiState.selectedMonth, uiState.selectedYear)
-                },
-            )
-        }
-        item {
-            CategoryBreakdownCard(
-                label = stringResource(id = SpendingCategoryDisplayObject.items[2].title),
-                amount = uiState.totalSpendingOnOthers,
-                progress = (uiState.totalOthersAmount / totalSpending).toFloat().coerceIn(0f, 1f),
-                accent = BudgetTheme.extendedColors.others,
-                icon = SpendingCategoryDisplayObject.items[2].spendingIcon,
-                onClick = {
-                    navigateToSpendingOnCategory("others", uiState.selectedMonth, uiState.selectedYear)
-                },
-            )
-        }
-        if (uiState.recentTransactions.isNotEmpty()) {
-            item {
-                RecentTransactionsCard(
-                    items = uiState.recentTransactions,
-                    onViewAll = {
-                        navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthlyHomeHeader(
-    periodLabel: String,
-    onOpenYear: () -> Unit,
-) {
-    val spacing = BudgetTheme.spacing
-    Column(
-        verticalArrangement = Arrangement.spacedBy(spacing.md),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-            Text(
-                text = "Overview",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = "Your monthly money view for $periodLabel.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Surface(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-            shape = RoundedCornerShape(BudgetTheme.radii.pill),
-            shadowElevation = BudgetTheme.elevations.level2,
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                HomeModeChip(
-                    label = "Year",
-                    selected = false,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenYear,
-                )
-                HomeModeChip(
-                    label = "Month",
-                    selected = true,
-                    modifier = Modifier.weight(1f),
-                    onClick = {},
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HomeModeChip(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-        shape = RoundedCornerShape(BudgetTheme.radii.pill),
-    ) {
-        Box(
-            modifier = Modifier.padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MonthPeriodNavigatorCard(
-    label: String,
-    canNavigatePrevious: Boolean,
-    canNavigateNext: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onOpenPicker: () -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        shadowElevation = BudgetTheme.elevations.level2,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        ) {
-            IconButton(onClick = onPrevious, enabled = canNavigatePrevious) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                    contentDescription = null,
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable(onClick = onOpenPicker),
-            ) {
-                Text(
-                    text = "Selected period",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            IconButton(onClick = onNext, enabled = canNavigateNext) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                    contentDescription = null,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthlySnapshotHeroCard(
-    periodLabel: String,
-    isCurrentPeriod: Boolean,
-    netBalance: String,
-    income: String,
-    spending: String,
-    onOpenInsights: () -> Unit,
-) {
-    val extendedColors = BudgetTheme.extendedColors
-    val spacing = BudgetTheme.spacing
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.xl),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level3),
-        onClick = onOpenInsights,
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            extendedColors.heroStart,
-                            extendedColors.heroEnd,
-                        )
-                    )
-                )
-                .padding(spacing.xl)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(112.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.06f),
-                        shape = CircleShape,
-                    )
-            )
-            Column(
-                verticalArrangement = Arrangement.spacedBy(spacing.lg),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                        Text(
-                            text = periodLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.74f),
-                        )
-                        Text(
-                            text = "Working balance",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                    Surface(
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.14f),
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(BudgetTheme.radii.pill),
-                    ) {
-                        Text(
-                            text = if (isCurrentPeriod) "Live month" else "Archived month",
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                    Text(
-                        text = netBalance,
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Text(
-                        text = "Tap for trend and habit insights",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f),
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
-                ) {
-                    HeroAmountPill(
-                        modifier = Modifier.weight(1f),
-                        label = "Income",
-                        value = income,
-                    )
-                    HeroAmountPill(
-                        modifier = Modifier.weight(1f),
-                        label = "Spent",
-                        value = spending,
-                    )
-                    Surface(
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f),
-                        shape = CircleShape,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeroAmountPill(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.10f),
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        shape = RoundedCornerShape(BudgetTheme.radii.md),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f),
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverviewMetricCard(
-    label: String,
-    value: String,
-    subtitle: String,
-    accent: Color,
-    icon: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
-        onClick = onClick,
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-        ) {
-            Surface(
-                color = accent.copy(alpha = 0.12f),
-                shape = CircleShape,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(id = icon),
-                        contentDescription = null,
-                        tint = accent,
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthlySignalCard(
-    comparisonTitle: String,
-    comparisonSummary: String,
-    comparisonDirection: ComparisonDirection,
-    topCategory: String,
-    topCategoryCaption: String,
-    averageDaily: String,
-) {
-    val statusColor = when (comparisonDirection) {
-        ComparisonDirection.Up -> BudgetTheme.extendedColors.danger
-        ComparisonDirection.Down -> BudgetTheme.extendedColors.success
-        ComparisonDirection.Flat -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-        ) {
-            Text(
-                text = comparisonTitle,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = comparisonSummary,
-                style = MaterialTheme.typography.headlineSmall,
-                color = statusColor,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-            ) {
-                SignalMetric(
-                    modifier = Modifier.weight(1f),
-                    title = "Top category",
-                    value = topCategory,
-                    subtitle = topCategoryCaption,
-                )
-                SignalMetric(
-                    modifier = Modifier.weight(1f),
-                    title = "Avg daily",
-                    value = averageDaily,
-                    subtitle = "Smoothed across the month",
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SignalMetric(
-    title: String,
-    value: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        shape = RoundedCornerShape(BudgetTheme.radii.md),
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.md),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CategoryBreakdownCard(
-    label: String,
-    amount: String,
-    progress: Float,
-    accent: Color,
-    icon: Int,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
-        onClick = onClick,
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Surface(
-                        color = accent.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(BudgetTheme.radii.md),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(id = icon),
-                                contentDescription = null,
-                                tint = accent,
-                            )
-                        }
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = amount,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Text(
-                    text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = accent,
-                )
-            }
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp),
-                color = accent,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecentTransactionsCard(
-    items: List<HomeTransactionPreview>,
-    onViewAll: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SectionHeading(
-                    title = "Recent activity",
-                    subtitle = "A faster skim of what just happened.",
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "View all",
-                    modifier = Modifier.clickable(onClick = onViewAll),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            items.forEachIndexed { index, item ->
-                RecentTransactionRow(item = item)
-                if (index != items.lastIndex) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecentTransactionRow(
-    item: HomeTransactionPreview,
-) {
-    val accent = when (item.categoryKey) {
-        "food" -> BudgetTheme.extendedColors.food
-        "transportation" -> BudgetTheme.extendedColors.transit
-        "others" -> BudgetTheme.extendedColors.others
-        else -> BudgetTheme.extendedColors.income
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(accent, CircleShape)
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = "${item.category} • ${item.date}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Text(
-            text = item.amount,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }
 
@@ -928,7 +301,7 @@ private fun MonthPeriodPickerBottomSheet(
             item {
                 SectionHeading(
                     title = "Jump to month",
-                    subtitle = "Move across your timeline without stepping one month at a time.",
+                    subtitle = "Move across your timeline without stepping through each month one by one.",
                 )
             }
             item {
@@ -937,10 +310,10 @@ private fun MonthPeriodPickerBottomSheet(
                     onClick = onJumpToCurrent,
                 )
             }
-            items(periods) { period ->
+            items(periods.size) { index ->
                 PeriodSheetRow(
-                    label = period.label,
-                    onClick = { onSelectPeriod(period) },
+                    label = periods[index].label,
+                    onClick = { onSelectPeriod(periods[index]) },
                 )
             }
         }
@@ -952,15 +325,15 @@ private fun PeriodSheetRow(
     label: String,
     onClick: () -> Unit,
 ) {
-    Surface(
+    androidx.compose.material3.Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
         shape = RoundedCornerShape(BudgetTheme.radii.md),
         shadowElevation = BudgetTheme.elevations.level1,
     ) {
-        Text(
+        androidx.compose.material3.Text(
             text = label,
             modifier = Modifier.padding(horizontal = BudgetTheme.spacing.lg, vertical = 16.dp),
             style = MaterialTheme.typography.titleMedium,

@@ -220,7 +220,7 @@ private fun VaultHeroCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level3),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
     ) {
         Column(
             modifier = Modifier
@@ -228,7 +228,7 @@ private fun VaultHeroCard(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            BudgetTheme.extendedColors.accentBlue.copy(alpha = 0.18f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f),
                             MaterialTheme.colorScheme.surface,
                         )
                     )
@@ -241,7 +241,7 @@ private fun VaultHeroCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    color = BudgetTheme.extendedColors.accentBlue.copy(alpha = 0.12f),
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = CircleShape,
                 ) {
                     Box(
@@ -251,7 +251,7 @@ private fun VaultHeroCard(
                         androidx.compose.material3.Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = BudgetTheme.extendedColors.accentBlue,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -376,13 +376,13 @@ private fun VaultAuthCard(
                 enabled = !isBusy,
                 shape = RoundedCornerShape(BudgetTheme.radii.lg),
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+            Column(
+                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
             ) {
                 Button(
                     onClick = onSignIn,
                     enabled = !isBusy && email.isNotBlank() && password.isNotBlank(),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(BudgetTheme.radii.lg),
                 ) {
                     if (isBusy) {
@@ -397,8 +397,12 @@ private fun VaultAuthCard(
                 Button(
                     onClick = onSignUp,
                     enabled = !isBusy && email.isNotBlank() && password.isNotBlank(),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
                 ) {
                     Text("Create account")
                 }
@@ -529,7 +533,7 @@ private fun VaultTimelineCard(
             VaultStatusRow(
                 title = "Cloud backup",
                 value = uiState.remoteBackupAt ?: "Not available",
-                tint = BudgetTheme.extendedColors.accentBlue,
+                tint = MaterialTheme.colorScheme.primary,
             )
             VaultStatusRow(
                 title = "Last upload from this device",
@@ -539,7 +543,7 @@ private fun VaultTimelineCard(
             VaultStatusRow(
                 title = "Last restore on this device",
                 value = uiState.lastRestoredAt ?: "Not available",
-                tint = BudgetTheme.extendedColors.accentGold,
+                tint = BudgetTheme.extendedColors.warning,
             )
         }
     }

@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
+import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
@@ -47,8 +48,8 @@ class SpendingOnCategoryScreenViewModel(
         val averageAmount = if (itemList.isEmpty()) 0.0 else totalCategory / itemList.size
         val biggestAmount = itemList.maxOfOrNull { it.amount } ?: 0.0
         SpendingOnCategoryUiState(
-            totalSpending = formatCurrencyIraqiDinar(totalSpending),
-            totalCategory = formatCurrencyIraqiDinar(totalCategory),
+            totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
+            totalCategory = formatCompactCurrencyIraqiDinar(totalCategory),
             spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
             itemList = mappedItems,
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
@@ -56,8 +57,8 @@ class SpendingOnCategoryScreenViewModel(
             sentCategory = category,
             periodLabel = "${Month.of(currentMonthValue).name.capitalized()} $currentYear",
             transactionCount = itemList.size,
-            averageTransaction = formatCurrencyIraqiDinar(averageAmount),
-            biggestTransaction = formatCurrencyIraqiDinar(biggestAmount),
+            averageTransaction = formatCompactCurrencyIraqiDinar(averageAmount),
+            biggestTransaction = formatCompactCurrencyIraqiDinar(biggestAmount),
             isDeleteDialogVisible = isDeleteDialogVisible.value,
         )
     }.stateIn(
@@ -112,6 +113,6 @@ fun BudgetTransaction.toSpendingOnCategoryItem(): SpendingOnCategoryItem =
         imagePath = picturePath,
         name = displayTitle(),
         date = transactionDate,
-        totalCost = formatCurrencyIraqiDinar(amount),
+        totalCost = formatCompactCurrencyIraqiDinar(amount),
         amountValue = amount,
     )

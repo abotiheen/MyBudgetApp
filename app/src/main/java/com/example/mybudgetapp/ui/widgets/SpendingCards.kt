@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.indication
@@ -43,14 +44,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
 import com.example.mybudgetapp.data.SpendingCategoryDisplayData
+import com.example.mybudgetapp.ui.theme.BudgetTheme
 
 @Composable
 fun TotalSpendingText(
@@ -67,10 +69,12 @@ fun TotalSpendingText(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
+        BudgetValueText(
             text = totalSpending,
-            style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(top = 4.dp),
+            tone = BudgetValueTone.Card,
+            color = MaterialTheme.colorScheme.onSurface,
+            unitLabel = "IQD",
         )
     }
 }
@@ -86,7 +90,7 @@ fun SpendingProgress(
     Card(
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(6.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
@@ -115,11 +119,12 @@ fun SpendingProgress(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(999.dp),
                 ) {
-                    Text(
+                    BudgetValueText(
                         text = totalSpending,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
+                        tone = BudgetValueTone.Compact,
                         color = MaterialTheme.colorScheme.primary,
+                        unitLabel = "IQD",
                     )
                 }
             }
@@ -157,7 +162,7 @@ fun ItemCard(
     Card(
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(4.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
@@ -188,6 +193,7 @@ fun ItemCard(
                 },
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -195,30 +201,50 @@ fun ItemCard(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(colorResource(id = displayItem.cardColor)),
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f))
+                        .border(
+                            width = 1.dp,
+                            color = BudgetTheme.extendedColors.edge,
+                            shape = RoundedCornerShape(20.dp),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    AsyncImage(
-                        model = imagePath,
-                        contentDescription = null,
-                        placeholder = painterResource(id = displayItem.spendingIcon),
-                        error = painterResource(id = displayItem.spendingIcon),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    if (imagePath != null) {
+                        AsyncImage(
+                            model = imagePath,
+                            contentDescription = null,
+                            placeholder = painterResource(id = displayItem.spendingIcon),
+                            error = painterResource(id = displayItem.spendingIcon),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = displayItem.spendingIcon),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                     Text(
                         text = date,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            Text(
+            BudgetValueText(
                 text = totalSpending,
-                style = MaterialTheme.typography.titleMedium,
+                tone = BudgetValueTone.Card,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.End,
+                unitLabel = "IQD",
             )
         }
         DropdownMenu(
@@ -262,7 +288,7 @@ fun TotalIncomeCard(
     Card(
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primary),
-        elevation = CardDefaults.cardElevation(6.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
@@ -279,10 +305,12 @@ fun TotalIncomeCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.74f),
             )
-            Text(
+            BudgetValueText(
                 text = totalSpending,
-                style = MaterialTheme.typography.headlineMedium,
+                tone = BudgetValueTone.Prominent,
                 color = MaterialTheme.colorScheme.onPrimary,
+                maxLines = 2,
+                unitLabel = "IQD",
             )
         }
     }
@@ -297,7 +325,7 @@ fun DateCard(
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(4.dp),
+        elevation = CardDefaults.cardElevation(1.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
@@ -309,11 +337,17 @@ fun DateCard(
                 .padding(18.dp)
                 .fillMaxWidth(),
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
             Text(
-                text = totalSpending,
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            BudgetValueText(
+                text = totalSpending,
+                tone = BudgetValueTone.Compact,
                 color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.End,
+                unitLabel = "IQD",
             )
         }
     }
@@ -329,7 +363,7 @@ fun ItemCardForDates(
     Card(
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(4.dp),
+        elevation = CardDefaults.cardElevation(1.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
@@ -345,7 +379,12 @@ fun ItemCardForDates(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(colorResource(id = displayItem.cardColor)),
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f))
+                    .border(
+                        width = 1.dp,
+                        color = BudgetTheme.extendedColors.edge,
+                        shape = RoundedCornerShape(20.dp),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (imagePath != null) {

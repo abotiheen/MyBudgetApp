@@ -48,6 +48,8 @@ import com.example.mybudgetapp.ui.viewmodels.SpendingOnCategoryForYearScreenView
 import com.example.mybudgetapp.ui.viewmodels.SpendingOnCategoryUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.BudgetValueText
+import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 
@@ -71,6 +73,7 @@ fun SpendingOnCategoryScreenForYear(
     val viewModel: SpendingOnCategoryForYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val categoryLabel = compactCategoryLabel(uiState.value.sentCategory, uiState.value.category)
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -78,7 +81,7 @@ fun SpendingOnCategoryScreenForYear(
         topBar = {
             BudgetTopAppBar(
                 canNavigateBack = true,
-                title = stringResource(id = R.string.spending_on_category_screen, uiState.value.category),
+                title = stringResource(id = R.string.spending_on_category_screen, categoryLabel),
                 scrollBehavior = scrollBehavior,
                 navigateBack = navigateBack,
             )
@@ -123,6 +126,7 @@ private fun SpendingOnCategoryYearBody(
     navigateToItemDates: (Long) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
+    val categoryLabel = compactCategoryLabel(uiState.sentCategory, uiState.category)
     val categoryDisplay = when (uiState.sentCategory) {
         "food" -> SpendingCategoryDisplayObject.items[0]
         "others" -> SpendingCategoryDisplayObject.items[2]
@@ -146,7 +150,7 @@ private fun SpendingOnCategoryYearBody(
     ) {
         item {
             YearCategorySnapshotCard(
-                category = uiState.category,
+                category = categoryLabel,
                 yearLabel = uiState.periodLabel,
                 totalCategory = uiState.totalCategory,
                 totalSpending = uiState.totalSpending,
@@ -183,14 +187,14 @@ private fun SpendingOnCategoryYearBody(
         }
         item {
             SectionHeading(
-                title = "${uiState.category} feed",
-                subtitle = "Every recorded entry behind the annual total.",
+                title = "$categoryLabel feed",
+                subtitle = "The recorded entries behind this annual total.",
             )
         }
         if (uiState.itemList.isEmpty()) {
             item {
                 YearEmptyCategoryFeedCard(
-                    category = uiState.category,
+                    category = categoryLabel,
                     accent = accent,
                 )
             }
@@ -210,6 +214,11 @@ private fun SpendingOnCategoryYearBody(
     }
 }
 
+private fun compactCategoryLabel(categoryKey: String, fallback: String): String = when (categoryKey) {
+    "transportation" -> "Transit"
+    else -> fallback
+}
+
 @Composable
 private fun YearCategorySnapshotCard(
     category: String,
@@ -224,7 +233,7 @@ private fun YearCategorySnapshotCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level3),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
     ) {
         Box(
             modifier = Modifier
@@ -292,10 +301,12 @@ private fun YearCategorySnapshotCard(
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
+                    BudgetValueText(
                         text = totalCategory,
-                        style = MaterialTheme.typography.displaySmall,
+                        modifier = Modifier.fillMaxWidth(),
+                        tone = BudgetValueTone.Hero,
                         color = MaterialTheme.colorScheme.onSurface,
+                        unitLabel = "IQD",
                     )
                     Text(
                         text = "Spent on $category in $yearLabel",
@@ -320,10 +331,11 @@ private fun YearCategorySnapshotCard(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Text(
+                            BudgetValueText(
                                 text = totalSpending,
-                                style = MaterialTheme.typography.titleMedium,
+                                tone = BudgetValueTone.Compact,
                                 color = MaterialTheme.colorScheme.onSurface,
+                                unitLabel = "IQD",
                             )
                         }
                         Box(
@@ -408,7 +420,7 @@ private fun YearEmptyCategoryFeedCard(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "When entries land here, this annual feed becomes your category view for the full year.",
+                text = "When entries land here, this annual feed becomes your view for the full year.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

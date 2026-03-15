@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
+import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.displayTitle
@@ -70,9 +71,9 @@ class ThisYearScreenViewModel(
                 totalOthersAmountForYear = totals.totalOthers,
                 totalSpendingForYear = formatCurrencyIraqiDinar(totals.totalSpending),
                 totalIncomeForYear = formatCurrencyIraqiDinar(totals.totalIncome),
-                totalSpendingOnFoodForYear = formatCurrencyIraqiDinar(totals.totalFood),
-                totalSpendingOnOthersForYear = formatCurrencyIraqiDinar(totals.totalOthers),
-                totalSpendingOnTransportationForYear = formatCurrencyIraqiDinar(totals.totalTransportation),
+                totalSpendingOnFoodForYear = formatCompactCurrencyIraqiDinar(totals.totalFood),
+                totalSpendingOnOthersForYear = formatCompactCurrencyIraqiDinar(totals.totalOthers),
+                totalSpendingOnTransportationForYear = formatCompactCurrencyIraqiDinar(totals.totalTransportation),
                 currentMonth = Month.of(date.monthValue).toString().capitalized(),
                 selectedYear = currentYear,
                 currentYear = currentYear.toString(),
@@ -93,7 +94,7 @@ class ThisYearScreenViewModel(
                         title = transaction.displayTitle(),
                         categoryKey = transaction.category,
                         category = categoryLabel(transaction.category),
-                        amount = formatCurrencyIraqiDinar(transaction.amount),
+                        amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
                     )
                 },

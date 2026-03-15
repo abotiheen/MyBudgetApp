@@ -47,6 +47,8 @@ import com.example.mybudgetapp.ui.viewmodels.TotalSpendingScreenForYearViewModel
 import com.example.mybudgetapp.ui.viewmodels.TotalSpendingUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.BudgetValueText
+import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 
@@ -182,7 +184,7 @@ private fun TotalIncomeYearBody(
         item {
             SectionHeading(
                 title = if (uiState.isIncome) "Income feed" else "Expense feed",
-                subtitle = "A cleaner browse of what shaped ${uiState.month}.",
+                subtitle = "The transactions that shaped ${uiState.month}.",
             )
         }
         if (items.isEmpty()) {
@@ -283,7 +285,7 @@ private fun YearTransactionSummaryCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level3),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
     ) {
         Box(
             modifier = Modifier
@@ -331,10 +333,12 @@ private fun YearTransactionSummaryCard(
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
+                    BudgetValueText(
                         text = totalValue,
-                        style = MaterialTheme.typography.displaySmall,
+                        modifier = Modifier.fillMaxWidth(),
+                        tone = BudgetValueTone.Hero,
                         color = MaterialTheme.colorScheme.onSurface,
+                        unitLabel = "IQD",
                     )
                     Text(
                         text = if (isIncome) {

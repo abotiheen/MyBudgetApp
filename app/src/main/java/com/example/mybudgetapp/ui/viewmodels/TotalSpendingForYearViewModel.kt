@@ -3,6 +3,7 @@ package com.example.mybudgetapp.ui.viewmodels
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.ui.screens.TotalIncomeDestinationForYear
@@ -36,11 +37,11 @@ class TotalSpendingScreenForYearViewModel(
         itemRepository.getIncomeTransactionsForYear(year = currentYear)
     ) { spendingItems, totalSpending, totalIncome, incomeItems ->
         TotalSpendingUiState(
-            totalSpending = formatCurrencyIraqiDinar(totalSpending),
+            totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
             spendingItemList = spendingItems.map { it.toSpendingItem() },
             month = currentYear.toString(),
             isIncome = isIncome,
-            totalIncome = formatCurrencyIraqiDinar(totalIncome),
+            totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
             incomeItemList = incomeItems.map { it.toSpendingItem() },
             isThisMonthCurrent = isThisYearCurrent,
             isDeleteDialogVisible = isDeleteDialogVisible.value

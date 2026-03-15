@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,9 +26,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -42,10 +45,10 @@ import com.example.mybudgetapp.ui.viewmodels.ItemDatesUiState
 import com.example.mybudgetapp.ui.viewmodels.ItemDatesViewModel
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
-import com.example.mybudgetapp.ui.widgets.DateCard
-import com.example.mybudgetapp.ui.widgets.SectionHeading
+import com.example.mybudgetapp.ui.widgets.BudgetValueText
+import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 
-object ItemDatesScreenNavigationDestination: NavigationDestination {
+object ItemDatesScreenNavigationDestination : NavigationDestination {
     override val route = "ItemDates"
     override val titleRes = R.string.spending_on_category_screen
     const val id: Long = 0
@@ -111,10 +114,10 @@ fun ItemDatesBody(
             top = spacing.lg,
             bottom = 40.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         item {
-            EntryHeroDetailCard(
+            ItemDetailOverviewCard(
                 title = uiState.name,
                 amount = uiState.amount,
                 typeLabel = uiState.typeLabel,
@@ -129,44 +132,33 @@ fun ItemDatesBody(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(spacing.md),
             ) {
-                EntryMetaCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Category",
-                    value = uiState.categoryLabel,
-                    subtitle = "Tagged for tracking",
-                )
-                EntryMetaCard(
+                DetailInfoTile(
                     modifier = Modifier.weight(1f),
                     label = "Type",
                     value = uiState.typeLabel,
-                    subtitle = "How this entry behaves",
+                    subtitle = "Entry behavior",
+                )
+                DetailInfoTile(
+                    modifier = Modifier.weight(1f),
+                    label = "Saved on",
+                    value = uiState.date,
+                    subtitle = "Recorded timeline",
                 )
             }
         }
         item {
-            EntryMetaCard(
-                label = "Recorded on",
-                value = uiState.date,
-                subtitle = "Saved to your timeline",
-            )
-        }
-        item {
-            SectionHeading(
-                title = "Recorded timeline",
-                subtitle = "This is the saved moment for the entry you opened.",
-            )
-        }
-        items(uiState.itemDatesList) {
-            DateCard(
-                title = it.date,
-                totalSpending = it.cost,
+            DetailHistoryCard(
+                title = "Saved history",
+                subtitle = "The exact recorded value attached to this entry.",
+                history = uiState.itemDatesList,
+                accent = accent,
             )
         }
     }
 }
 
 @Composable
-private fun EntryHeroDetailCard(
+private fun ItemDetailOverviewCard(
     title: String,
     amount: String,
     typeLabel: String,
@@ -179,7 +171,7 @@ private fun EntryHeroDetailCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level3),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
     ) {
         Column(
             modifier = Modifier
@@ -188,70 +180,92 @@ private fun EntryHeroDetailCard(
                     Brush.verticalGradient(
                         colors = listOf(
                             accent.copy(alpha = 0.16f),
-                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f),
                             MaterialTheme.colorScheme.surface,
                         )
                     )
                 )
                 .padding(BudgetTheme.spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = typeLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = accent,
-                    )
+                Surface(
+                    color = accent.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.md),
+                ) {
+                    Box(
+                        modifier = Modifier.size(52.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        androidx.compose.material3.Icon(
+                            painter = painterResource(id = icon),
+                            contentDescription = null,
+                            tint = accent,
+                        )
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                }
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(BudgetTheme.radii.pill),
-                ) {
                     Text(
-                        text = categoryLabel,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
+                        text = "Entry details",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            Text(
-                text = amount,
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                shape = RoundedCornerShape(BudgetTheme.radii.lg),
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(BudgetTheme.spacing.md),
-                    contentAlignment = Alignment.Center,
+                DetailTag(label = typeLabel, tint = accent)
+                DetailTag(label = categoryLabel, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            BudgetValueText(
+                text = amount,
+                modifier = Modifier.fillMaxWidth(),
+                tone = BudgetValueTone.Hero,
+                color = MaterialTheme.colorScheme.onSurface,
+                unitLabel = "IQD",
+            )
+
+            if (imagePath != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
                 ) {
-                    if (imagePath != null) {
-                        AsyncImage(
-                            model = imagePath,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .size(220.dp),
-                        )
-                    } else {
+                    AsyncImage(
+                        model = imagePath,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(BudgetTheme.radii.lg)),
+                    )
+                }
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(BudgetTheme.spacing.lg),
+                        horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(92.dp)
+                                .size(52.dp)
                                 .background(accent.copy(alpha = 0.12f), CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -259,7 +273,18 @@ private fun EntryHeroDetailCard(
                                 painter = painterResource(id = icon),
                                 contentDescription = null,
                                 tint = accent,
-                                modifier = Modifier.size(40.dp),
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "No image attached",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "This entry was saved without a receipt or photo.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -270,7 +295,25 @@ private fun EntryHeroDetailCard(
 }
 
 @Composable
-private fun EntryMetaCard(
+private fun DetailTag(
+    label: String,
+    tint: Color,
+) {
+    Surface(
+        color = tint.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(BudgetTheme.radii.pill),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = tint,
+        )
+    }
+}
+
+@Composable
+private fun DetailInfoTile(
     label: String,
     value: String,
     subtitle: String,
@@ -280,11 +323,11 @@ private fun EntryMetaCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
     ) {
         Column(
             modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = label,
@@ -293,7 +336,7 @@ private fun EntryMetaCard(
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
@@ -302,5 +345,84 @@ private fun EntryMetaCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun DetailHistoryCard(
+    title: String,
+    subtitle: String,
+    history: List<com.example.mybudgetapp.ui.viewmodels.ItemWIthDates>,
+    accent: Color,
+) {
+    Card(
+        shape = RoundedCornerShape(BudgetTheme.radii.xl),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            history.forEachIndexed { index, item ->
+                DetailHistoryRow(
+                    date = item.date,
+                    amount = item.cost,
+                    accent = accent,
+                )
+                if (index != history.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(BudgetTheme.extendedColors.edge)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailHistoryRow(
+    date: String,
+    amount: String,
+    accent: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = date,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Recorded value",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        BudgetValueText(
+            text = amount,
+            tone = BudgetValueTone.Card,
+            color = accent,
+            unitLabel = "IQD",
+        )
     }
 }

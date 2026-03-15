@@ -1,11 +1,9 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,8 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -31,12 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
@@ -49,8 +42,6 @@ import com.example.mybudgetapp.ui.viewmodels.TotalSpendingScreenViewModel
 import com.example.mybudgetapp.ui.viewmodels.TotalSpendingUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
-import com.example.mybudgetapp.ui.widgets.ItemCard
-import com.example.mybudgetapp.ui.widgets.SectionHeading
 
 object TotalIncomeDestination : NavigationDestination {
     override val route = "TotalIncome"
@@ -129,13 +120,10 @@ fun TotalIncomeBody(
 ) {
     val spacing = BudgetTheme.spacing
     val items = if (uiState.isIncome) uiState.incomeItemList else uiState.spendingItemList
-    val accent = if (uiState.isIncome) {
-        BudgetTheme.extendedColors.income
-    } else {
-        BudgetTheme.extendedColors.danger
-    }
+    val accent = if (uiState.isIncome) BudgetTheme.extendedColors.income else BudgetTheme.extendedColors.danger
     val totalValue = if (uiState.isIncome) uiState.totalIncome else uiState.totalSpending
     val largestTransaction = items.maxByOrNull { it.amountValue }?.totalCost ?: totalValue
+    val heroIcon = if (uiState.isIncome) R.drawable.baseline_attach_money_24 else R.drawable.baseline_money_off_24
 
     LazyColumn(
         modifier = modifier,
@@ -145,7 +133,7 @@ fun TotalIncomeBody(
             top = spacing.lg,
             bottom = 40.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         item {
             TransactionTypeSwitch(
@@ -154,62 +142,55 @@ fun TotalIncomeBody(
             )
         }
         item {
-            TransactionSummaryCard(
-                isIncome = uiState.isIncome,
-                monthLabel = uiState.month,
+            DetailCollectionHero(
+                title = if (uiState.isIncome) "Income flow" else "Expense flow",
+                periodLabel = uiState.month,
                 totalValue = totalValue,
-                itemCount = items.size,
-                isCurrentPeriod = uiState.isThisMonthCurrent,
+                subtitle = if (uiState.isIncome) {
+                    "Every income entry for this month in one place."
+                } else {
+                    "Every expense entry for this month in one place."
+                },
+                badgeLabel = if (uiState.isThisMonthCurrent) "Live month" else "Archived",
                 accent = accent,
+                iconRes = heroIcon,
+                chips = listOf(
+                    DetailHeroChipUi("Entries", items.size.toString()),
+                    DetailHeroChipUi("Largest", largestTransaction, isMonetary = true),
+                ),
             )
         }
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            ) {
-                TransactionStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Entries",
-                    value = items.size.toString(),
-                    subtitle = if (uiState.isIncome) "Income records" else "Expense records",
-                )
-                TransactionStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Largest",
-                    value = largestTransaction,
-                    subtitle = if (uiState.isIncome) "Biggest income" else "Biggest expense",
-                )
-            }
-        }
-        item {
-            SectionHeading(
-                title = if (uiState.isIncome) "Income feed" else "Expense feed",
-                subtitle = "A cleaner browse of what shaped ${uiState.month}.",
+            DetailListHeader(
+                title = if (uiState.isIncome) "Entries" else "Transactions",
+                subtitle = if (items.isEmpty()) {
+                    "Nothing recorded for ${uiState.month} yet."
+                } else {
+                    "${items.size} items, sorted for quick scanning."
+                },
             )
         }
         if (items.isEmpty()) {
             item {
-                EmptyTransactionCard(
-                    isIncome = uiState.isIncome,
+                DetailEmptyStateCard(
+                    title = if (uiState.isIncome) "No income entries yet" else "No expense entries yet",
+                    message = if (uiState.isIncome) {
+                        "Income records will show up here as soon as you add them."
+                    } else {
+                        "Expense records will show up here as soon as you add them."
+                    },
                     accent = accent,
+                    iconRes = heroIcon,
                 )
             }
         } else {
             items(items) { item ->
-                ItemCard(
-                    title = item.name,
-                    totalSpending = item.totalCost,
-                    deleteItem = { deleteItem(item.itemId) },
-                    date = item.date,
-                    imagePath = item.imagePath,
-                    navigateToItemDates = { navigateToItemDates(item.itemId) },
-                    displayItem = when (item.category) {
-                        "food" -> SpendingCategoryDisplayObject.items[0]
-                        "others" -> SpendingCategoryDisplayObject.items[2]
-                        "transportation" -> SpendingCategoryDisplayObject.items[1]
-                        else -> SpendingCategoryDisplayObject.items[3]
-                    },
+                TransactionEntryRow(
+                    item = item,
+                    isIncome = uiState.isIncome,
+                    accent = accent,
+                    onDelete = { deleteItem(item.itemId) },
+                    onOpen = { navigateToItemDates(item.itemId) },
                 )
             }
         }
@@ -274,199 +255,32 @@ private fun TransactionTypeChip(
 }
 
 @Composable
-private fun TransactionSummaryCard(
-    isIncome: Boolean,
-    monthLabel: String,
-    totalValue: String,
-    itemCount: Int,
-    isCurrentPeriod: Boolean,
-    accent: Color,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.xl),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level3),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            accent.copy(alpha = 0.16f),
-                            MaterialTheme.colorScheme.surface,
-                        )
-                    )
-                )
-                .padding(BudgetTheme.spacing.xl)
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.lg),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = monthLabel,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = if (isIncome) "Income center" else "Expense center",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(BudgetTheme.radii.pill),
-                    ) {
-                        Text(
-                            text = if (isCurrentPeriod) "Live month" else "Archived month",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = accent,
-                        )
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = totalValue,
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = if (isIncome) {
-                            "Total income recorded in this month"
-                        } else {
-                            "Total expenses recorded in this month"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Surface(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = BudgetTheme.spacing.md, vertical = BudgetTheme.spacing.md),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = "Feed size",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = "$itemCount entries",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .background(accent.copy(alpha = 0.12f), CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (isIncome) {
-                                        R.drawable.baseline_attach_money_24
-                                    } else {
-                                        R.drawable.baseline_money_off_24
-                                    }
-                                ),
-                                contentDescription = null,
-                                tint = accent,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TransactionStatCard(
-    label: String,
-    value: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptyTransactionCard(
+private fun TransactionEntryRow(
+    item: SpendingItem,
     isIncome: Boolean,
     accent: Color,
+    onDelete: () -> Unit,
+    onOpen: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(accent.copy(alpha = 0.12f), CircleShape)
-            )
-            Text(
-                text = if (isIncome) "No income entries yet" else "No expense entries yet",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = if (isIncome) {
-                    "Income records will show up here as soon as you add them."
-                } else {
-                    "Expense records will show up here as soon as you add them."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    val categoryDisplay = when (item.category) {
+        "food" -> SpendingCategoryDisplayObject.items[0]
+        "others" -> SpendingCategoryDisplayObject.items[2]
+        "transportation" -> SpendingCategoryDisplayObject.items[1]
+        else -> SpendingCategoryDisplayObject.items[3]
     }
+
+    DetailEntryRow(
+        title = item.name,
+        amount = item.totalCost,
+        meta = if (isIncome) {
+            "Income • ${item.date}"
+        } else {
+            "${item.category.replaceFirstChar { it.uppercase() }} • ${item.date}"
+        },
+        imagePath = item.imagePath,
+        iconRes = categoryDisplay.spendingIcon,
+        accent = accent,
+        onOpen = onOpen,
+        onDelete = onDelete,
+    )
 }

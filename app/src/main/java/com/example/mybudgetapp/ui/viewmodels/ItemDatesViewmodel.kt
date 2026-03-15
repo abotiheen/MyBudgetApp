@@ -26,7 +26,7 @@ class ItemDatesViewModel(
             ItemDatesUiState(
                 itemDatesList = listOf(transaction.toItemWithDates()),
                 category = transaction.category,
-                categoryLabel = transaction.category.replaceFirstChar { it.uppercase() },
+                categoryLabel = categoryLabel(transaction.category),
                 name = transaction.displayTitle(),
                 date = transaction.transactionDate,
                 amount = formatCurrencyIraqiDinar(transaction.amount),
