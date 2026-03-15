@@ -114,6 +114,33 @@ interface TransactionDao {
 
     @Query(
         """
+        select cast(strftime('%d', transactionDate) as integer) as day,
+               ifnull(sum(amount), 0) as total
+        from transactions
+        where type = 'expense'
+          and cast(strftime('%m', transactionDate) as integer) = :month
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        group by day
+        order by day asc
+        """
+    )
+    fun getDailySpendingTotals(month: Int, year: Int): Flow<List<DailySpendingTotal>>
+
+    @Query(
+        """
+        select cast(strftime('%m', transactionDate) as integer) as month,
+               ifnull(sum(amount), 0) as total
+        from transactions
+        where type = 'expense'
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        group by month
+        order by month asc
+        """
+    )
+    fun getMonthlySpendingTotals(year: Int): Flow<List<MonthlySpendingTotal>>
+
+    @Query(
+        """
         select ifnull(sum(amount), 0)
         from transactions
         where category = :category

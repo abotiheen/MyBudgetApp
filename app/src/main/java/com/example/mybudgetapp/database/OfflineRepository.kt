@@ -52,6 +52,12 @@ class OfflineRepository(
     override fun getIncomeTransactionsForYear(year: Int): Flow<List<BudgetTransaction>> =
         transactionDao.getTransactionsByTypeForYear(year, TRANSACTION_TYPE_INCOME)
 
+    override fun getDailySpendingTotals(month: Int, year: Int): Flow<List<DailySpendingTotal>> =
+        transactionDao.getDailySpendingTotals(month, year)
+
+    override fun getMonthlySpendingTotals(year: Int): Flow<List<MonthlySpendingTotal>> =
+        transactionDao.getMonthlySpendingTotals(year)
+
     override fun getTotalSpendingOnCategory(category: String, year: Int, month: Int): Flow<Double> =
         transactionDao.getTotalSpendingOnCategory(category, year, month)
 

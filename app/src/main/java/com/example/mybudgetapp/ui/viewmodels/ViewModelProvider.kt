@@ -64,6 +64,12 @@ object AppViewModelProvider {
                 budgetApplication().container.cloudBackupRepository,
             )
         }
+        initializer {
+            InsightsViewModel(
+                budgetApplication().container.itemRepository,
+                this.createSavedStateHandle()
+            )
+        }
 
 
     }

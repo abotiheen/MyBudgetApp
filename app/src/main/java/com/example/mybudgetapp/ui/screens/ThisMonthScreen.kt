@@ -3,7 +3,6 @@ package com.example.mybudgetapp.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -48,6 +46,7 @@ import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenViewModel
 import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.CategoryCard
+import com.example.mybudgetapp.ui.widgets.InsightsEntryCard
 import com.example.mybudgetapp.ui.widgets.TotalIncomeSpending
 
 object ThisMonthDestination : NavigationDestination {
@@ -60,6 +59,7 @@ object ThisMonthDestination : NavigationDestination {
 fun ThisMonthScreen(
     navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
+    navigateToInsights: (Int, Int) -> Unit,
     navigateToCloudBackup: () -> Unit,
     navigateToThisMonthScreen: () -> Unit,
     navigateToThisYearScreen: () -> Unit
@@ -107,6 +107,7 @@ fun ThisMonthScreen(
             onOpenPeriodPicker = { isPeriodPickerVisible = true },
             navigateToSpendingOnCategory = navigateToSpendingOnCategory,
             navigateToTotalIncome = navigateToTotalIncome,
+            navigateToInsights = navigateToInsights,
         )
 
         if (isQuickAddVisible) {
@@ -142,93 +143,96 @@ fun ThisMonthScreenBody(
     onOpenPeriodPicker: () -> Unit,
     navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
+    navigateToInsights: (Int, Int) -> Unit,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .then(modifier)
+            .then(modifier),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        MonthPeriodHeader(
-            label = uiState.periodLabel,
-            canNavigatePrevious = uiState.canNavigatePrevious,
-            canNavigateNext = uiState.canNavigateNext,
-            onPrevious = onPreviousPeriod,
-            onNext = onNextPeriod,
-            onOpenPicker = onOpenPeriodPicker,
-        )
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier
-                .padding(vertical = 8.dp, horizontal = 16.dp)
-                .fillMaxWidth()
-        ) {
-            TotalIncomeSpending(
-                icon = R.drawable.baseline_attach_money_24,
-                incomeOrSpending = R.string.income,
-                total = uiState.totalIncome,
-                modifier = Modifier.weight(1f),
-                navigateToTotalIncome = {
-                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, true)
-                }
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            TotalIncomeSpending(
-                icon = R.drawable.baseline_money_off_24,
-                incomeOrSpending = R.string.spending,
-                total = uiState.totalSpending,
-                modifier = Modifier.weight(1f),
-                navigateToTotalIncome = {
-                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
-                }
+        item {
+            MonthPeriodHeader(
+                label = uiState.periodLabel,
+                canNavigatePrevious = uiState.canNavigatePrevious,
+                canNavigateNext = uiState.canNavigateNext,
+                onPrevious = onPreviousPeriod,
+                onNext = onNextPeriod,
+                onOpenPicker = onOpenPeriodPicker,
             )
         }
-
-        Column(
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .padding(all = 8.dp)
-                .fillMaxSize()
-        ) {
+        item {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier
-                    .padding(vertical = 2.dp, horizontal = 12.dp)
+                    .padding(horizontal = 8.dp)
                     .fillMaxWidth()
             ) {
-                Text(
-                    text = "Your spending",
-                    fontFamily = dmSans,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                TotalIncomeSpending(
+                    icon = R.drawable.baseline_attach_money_24,
+                    incomeOrSpending = R.string.income,
+                    total = uiState.totalIncome,
+                    modifier = Modifier.weight(1f),
+                    navigateToTotalIncome = {
+                        navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, true)
+                    }
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                TotalIncomeSpending(
+                    icon = R.drawable.baseline_money_off_24,
+                    incomeOrSpending = R.string.spending,
+                    total = uiState.totalSpending,
+                    modifier = Modifier.weight(1f),
+                    navigateToTotalIncome = {
+                        navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
+                    }
                 )
             }
+        }
+        item {
+            InsightsEntryCard(
+                title = "Insights and habits",
+                subtitle = "Open the deeper stats screen only when you need it.",
+                onClick = { navigateToInsights(uiState.selectedMonth, uiState.selectedYear) },
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        item {
+            Text(
+                text = "Your spending",
+                fontFamily = dmSans,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+        }
+        item {
             CategoryCard(
                 item = SpendingCategoryDisplayObject.items[0],
                 totalSpending = uiState.totalSpendingOnFood,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(horizontal = 8.dp),
                 navigateToSpendingOnCategory = {
                     navigateToSpendingOnCategory("food", uiState.selectedMonth, uiState.selectedYear)
                 }
             )
+        }
+        item {
             CategoryCard(
                 item = SpendingCategoryDisplayObject.items[1],
                 totalSpending = uiState.totalSpendingOnTransportation,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(horizontal = 8.dp),
                 navigateToSpendingOnCategory = {
                     navigateToSpendingOnCategory("transportation", uiState.selectedMonth, uiState.selectedYear)
                 }
             )
+        }
+        item {
             CategoryCard(
                 item = SpendingCategoryDisplayObject.items[2],
                 totalSpending = uiState.totalSpendingOnOthers,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(horizontal = 8.dp),
                 navigateToSpendingOnCategory = {
                     navigateToSpendingOnCategory("others", uiState.selectedMonth, uiState.selectedYear)
                 }
@@ -300,7 +304,8 @@ private fun MonthPeriodPickerBottomSheet(
                         .padding(horizontal = 24.dp, vertical = 14.dp)
                 )
             }
-            items(periods) { period ->
+            items(periods.size) { index ->
+                val period = periods[index]
                 Text(
                     text = period.label,
                     modifier = Modifier

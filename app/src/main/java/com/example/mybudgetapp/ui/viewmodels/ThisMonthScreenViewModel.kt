@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import java.time.Month
+import java.time.YearMonth
 
 class ThisMonthScreenViewModel(
     private val itemRepository: ItemRepository
@@ -46,38 +47,37 @@ class ThisMonthScreenViewModel(
         val normalizedPeriods = periods.withCurrentPeriod(MonthPeriod(today.year, today.monthValue)).ifEmpty { listOf(active) }
         normalizedPeriods to active
     }.flatMapLatest { (periods, period) ->
-        combine(
-            itemRepository.getTotalSpendingOverall(
-                month = period.month,
-                year = period.year,
-            ),
-            itemRepository.getTotalIncomeOverall(
-                year = period.year,
-                month = period.month,
-            ),
-            itemRepository.getTotalSpendingOnCategory(
-                month = period.month,
-                year = period.year,
-                category = "food"
-            ),
-            itemRepository.getTotalSpendingOnCategory(
-                month = period.month,
-                year = period.year,
-                category = "transportation"
-            ),
-            itemRepository.getTotalSpendingOnCategory(
-                month = period.month,
-                year = period.year,
-                category = "others"
-            )
+        val previousPeriod = YearMonth.of(period.year, period.month).minusMonths(1)
+        val totalsFlow = combine(
+            itemRepository.getTotalSpendingOverall(month = period.month, year = period.year),
+            itemRepository.getTotalIncomeOverall(year = period.year, month = period.month),
+            itemRepository.getTotalSpendingOnCategory(month = period.month, year = period.year, category = "food"),
+            itemRepository.getTotalSpendingOnCategory(month = period.month, year = period.year, category = "transportation"),
+            itemRepository.getTotalSpendingOnCategory(month = period.month, year = period.year, category = "others"),
         ) { totalSpending, totalIncome, totalFood, totalTrans, totalOther ->
+            MonthTotals(
+                totalSpending = totalSpending,
+                totalIncome = totalIncome,
+                totalFood = totalFood,
+                totalTransportation = totalTrans,
+                totalOthers = totalOther,
+            )
+        }
+        combine(
+            totalsFlow,
+            itemRepository.getTransactions(month = period.month, year = period.year),
+            itemRepository.getDailySpendingTotals(month = period.month, year = period.year),
+            itemRepository.getTotalSpendingOverall(year = previousPeriod.year, month = previousPeriod.monthValue),
+        ) { totals, transactions, dailyTotals, previousTotal ->
             val selectedIndex = periods.indexOfFirst { it.year == period.year && it.month == period.month }
+            val dayMap = dailyTotals.associate { it.day to it.total }
+            val yearMonth = YearMonth.of(period.year, period.month)
             ThisMonthScreenUiState(
-                totalSpending = formatCurrencyIraqiDinar(totalSpending),
-                totalIncome = formatCurrencyIraqiDinar(totalIncome),
-                totalSpendingOnFood = formatCurrencyIraqiDinar(totalFood),
-                totalSpendingOnOthers = formatCurrencyIraqiDinar(totalOther),
-                totalSpendingOnTransportation = formatCurrencyIraqiDinar(totalTrans),
+                totalSpending = formatCurrencyIraqiDinar(totals.totalSpending),
+                totalIncome = formatCurrencyIraqiDinar(totals.totalIncome),
+                totalSpendingOnFood = formatCurrencyIraqiDinar(totals.totalFood),
+                totalSpendingOnOthers = formatCurrencyIraqiDinar(totals.totalOthers),
+                totalSpendingOnTransportation = formatCurrencyIraqiDinar(totals.totalTransportation),
                 currentMonth = Month.of(period.month).toString().capitalized(),
                 selectedMonth = period.month,
                 selectedYear = period.year,
@@ -92,6 +92,9 @@ class ThisMonthScreenViewModel(
                 canNavigatePrevious = selectedIndex > 0,
                 canNavigateNext = selectedIndex in 0 until periods.lastIndex,
                 isCurrentPeriod = period.year == today.year && period.month == today.monthValue,
+                spendingTrend = buildMonthTrendPoints(yearMonth.lengthOfMonth(), dayMap),
+                comparison = buildMonthlyComparison(totals.totalSpending, previousTotal, yearMonth),
+                insights = monthInsights(transactions, totals.totalSpending, period.year, period.month),
             )
         }
     }.stateIn(
@@ -156,6 +159,14 @@ data class MonthPeriodOption(
     val label: String,
 )
 
+private data class MonthTotals(
+    val totalSpending: Double,
+    val totalIncome: Double,
+    val totalFood: Double,
+    val totalTransportation: Double,
+    val totalOthers: Double,
+)
+
 data class ThisMonthScreenUiState(
     val currentMonth: String = "",
     val periodLabel: String = "",
@@ -170,5 +181,8 @@ data class ThisMonthScreenUiState(
     val canNavigatePrevious: Boolean = false,
     val canNavigateNext: Boolean = false,
     val isCurrentPeriod: Boolean = false,
+    val spendingTrend: List<TrendPointUi> = emptyList(),
+    val comparison: ComparisonInsightUi = ComparisonInsightUi(),
+    val insights: List<StatInsightUi> = emptyList(),
     val screenItemsUiState: MutableState<ScreenItemsUiState> = mutableStateOf(ScreenItemsUiState())
 )

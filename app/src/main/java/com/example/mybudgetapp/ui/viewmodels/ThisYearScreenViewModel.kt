@@ -38,20 +38,35 @@ class ThisYearScreenViewModel(
         val normalizedYears = years.withCurrentYear(date.year).ifEmpty { listOf(active) }
         normalizedYears to active
     }.flatMapLatest { (years, currentYear) ->
-        combine(
+        val totalsFlow = combine(
             itemRepository.getTotalSpendingOverallForYear(year = currentYear),
             itemRepository.getTotalIncomeOverallForYear(year = currentYear),
             itemRepository.getTotalSpendingOnCategoryForYear(year = currentYear, category = "food"),
             itemRepository.getTotalSpendingOnCategoryForYear(year = currentYear, category = "transportation"),
             itemRepository.getTotalSpendingOnCategoryForYear(year = currentYear, category = "others")
         ) { totalSpending, totalIncome, totalFood, totalTrans, totalOther ->
+            YearTotals(
+                totalSpending = totalSpending,
+                totalIncome = totalIncome,
+                totalFood = totalFood,
+                totalTransportation = totalTrans,
+                totalOthers = totalOther,
+            )
+        }
+        combine(
+            totalsFlow,
+            itemRepository.getTransactionsForYear(year = currentYear),
+            itemRepository.getMonthlySpendingTotals(year = currentYear),
+            itemRepository.getTotalSpendingOverallForYear(year = currentYear - 1),
+        ) { totals, transactions, monthlyTotals, previousYearTotal ->
             val selectedIndex = years.indexOf(currentYear)
+            val monthMap = monthlyTotals.associate { it.month to it.total }
             ThisYearScreenUiState(
-                totalSpendingForYear = formatCurrencyIraqiDinar(totalSpending),
-                totalIncomeForYear = formatCurrencyIraqiDinar(totalIncome),
-                totalSpendingOnFoodForYear = formatCurrencyIraqiDinar(totalFood),
-                totalSpendingOnOthersForYear = formatCurrencyIraqiDinar(totalOther),
-                totalSpendingOnTransportationForYear = formatCurrencyIraqiDinar(totalTrans),
+                totalSpendingForYear = formatCurrencyIraqiDinar(totals.totalSpending),
+                totalIncomeForYear = formatCurrencyIraqiDinar(totals.totalIncome),
+                totalSpendingOnFoodForYear = formatCurrencyIraqiDinar(totals.totalFood),
+                totalSpendingOnOthersForYear = formatCurrencyIraqiDinar(totals.totalOthers),
+                totalSpendingOnTransportationForYear = formatCurrencyIraqiDinar(totals.totalTransportation),
                 currentMonth = Month.of(date.monthValue).toString().capitalized(),
                 selectedYear = currentYear,
                 currentYear = currentYear.toString(),
@@ -64,6 +79,9 @@ class ThisYearScreenViewModel(
                 canNavigatePrevious = selectedIndex > 0,
                 canNavigateNext = selectedIndex in 0 until years.lastIndex,
                 isCurrentYear = currentYear == date.year,
+                spendingTrend = buildYearTrendPoints(monthMap),
+                comparison = buildYearlyComparison(totals.totalSpending, previousYearTotal, currentYear),
+                insights = yearInsights(transactions, totals.totalSpending, currentYear),
             )
         }
     }.stateIn(
@@ -110,6 +128,14 @@ private fun List<Int>.withCurrentYear(currentYear: Int): List<Int> {
     return (this + currentYear).distinct().sorted()
 }
 
+private data class YearTotals(
+    val totalSpending: Double,
+    val totalIncome: Double,
+    val totalFood: Double,
+    val totalTransportation: Double,
+    val totalOthers: Double,
+)
+
 data class ThisYearScreenUiState(
     val currentMonth: String = "",
     val selectedYear: Int = 0,
@@ -123,5 +149,8 @@ data class ThisYearScreenUiState(
     val canNavigatePrevious: Boolean = false,
     val canNavigateNext: Boolean = false,
     val isCurrentYear: Boolean = false,
+    val spendingTrend: List<TrendPointUi> = emptyList(),
+    val comparison: ComparisonInsightUi = ComparisonInsightUi(),
+    val insights: List<StatInsightUi> = emptyList(),
     val screenItemsUiState: MutableState<ScreenItemsUiState> = mutableStateOf(ScreenItemsUiState())
 )

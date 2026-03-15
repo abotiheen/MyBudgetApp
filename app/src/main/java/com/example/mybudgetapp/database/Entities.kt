@@ -33,6 +33,16 @@ data class MonthPeriod(
     val month: Int,
 )
 
+data class DailySpendingTotal(
+    val day: Int,
+    val total: Double,
+)
+
+data class MonthlySpendingTotal(
+    val month: Int,
+    val total: Double,
+)
+
 fun BudgetTransaction.displayTitle(): String {
     return title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
 }

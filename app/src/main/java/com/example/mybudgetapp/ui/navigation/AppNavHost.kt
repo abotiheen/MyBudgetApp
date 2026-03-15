@@ -13,6 +13,8 @@ import com.example.mybudgetapp.ui.screens.CloudBackupDestination
 import com.example.mybudgetapp.ui.screens.CloudBackupScreen
 import com.example.mybudgetapp.ui.screens.ItemDatesScreen
 import com.example.mybudgetapp.ui.screens.ItemDatesScreenNavigationDestination
+import com.example.mybudgetapp.ui.screens.InsightsDestination
+import com.example.mybudgetapp.ui.screens.InsightsScreen
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryForYearDestination
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryScreen
@@ -48,6 +50,11 @@ fun AppNavHost (
                         "${TotalIncomeDestination.route}/$month/$year/$isIncome"
                     )
                 },
+                navigateToInsights = { month, year ->
+                    navController.navigate(
+                        "${InsightsDestination.route}/month/$year/$month"
+                    )
+                },
                 navigateToCloudBackup = {
                     navController.navigate(CloudBackupDestination.route)
                 },
@@ -66,6 +73,11 @@ fun AppNavHost (
                 },
                 navigateToCloudBackup = {
                     navController.navigate(CloudBackupDestination.route)
+                },
+                navigateToInsights = { year ->
+                    navController.navigate(
+                        "${InsightsDestination.route}/year/$year/0"
+                    )
                 },
                 navigateToSpendingOnCategoryForYear = { category, year ->
                     navController.navigate(
@@ -87,6 +99,38 @@ fun AppNavHost (
                 navigateToThisYearScreen = {
                     navController.navigate(ThisYearDestination.route)
                 },
+            )
+        }
+        composable(
+            route = InsightsDestination.routeWithArgs,
+            arguments = listOf(
+                navArgument(InsightsDestination.scope) {
+                    type = NavType.StringType
+                },
+                navArgument(InsightsDestination.year) {
+                    type = NavType.IntType
+                },
+                navArgument(InsightsDestination.month) {
+                    type = NavType.IntType
+                },
+            )
+        ) {
+            val scope = checkNotNull(it.arguments?.getString(InsightsDestination.scope))
+            val year = checkNotNull(it.arguments?.getInt(InsightsDestination.year))
+            val month = checkNotNull(it.arguments?.getInt(InsightsDestination.month))
+            InsightsScreen(
+                navigateBack = { navController.navigateUp() },
+                navigateToSpendingOnCategory = { category ->
+                    if (scope == "year") {
+                        navController.navigate(
+                            "${SpendingOnCategoryForYearDestination.route}/$category/$year"
+                        )
+                    } else {
+                        navController.navigate(
+                            "${SpendingOnCategoryDestination.route}/$category/$month/$year"
+                        )
+                    }
+                }
             )
         }
         composable(

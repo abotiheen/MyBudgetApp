@@ -21,6 +21,8 @@ interface ItemRepository {
     fun getTransactionsByCategoryForYear(year: Int, category: String): Flow<List<BudgetTransaction>>
     fun getIncomeTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>>
     fun getIncomeTransactionsForYear(year: Int): Flow<List<BudgetTransaction>>
+    fun getDailySpendingTotals(month: Int, year: Int): Flow<List<DailySpendingTotal>>
+    fun getMonthlySpendingTotals(year: Int): Flow<List<MonthlySpendingTotal>>
 
     fun getTotalSpendingOnCategory(category: String, year: Int, month: Int): Flow<Double>
     fun getTotalSpendingOverall(year: Int, month: Int): Flow<Double>
