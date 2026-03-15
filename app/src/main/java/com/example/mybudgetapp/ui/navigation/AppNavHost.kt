@@ -215,6 +215,11 @@ fun AppNavHost (
         ) {
             TotalIncomeScreen(
                 navigateBack = {navController.popBackStack()},
+                navigateToTransactionType = { isIncome ->
+                    val year = checkNotNull(it.arguments?.getInt(TotalIncomeDestination.year))
+                    val month = checkNotNull(it.arguments?.getInt(TotalIncomeDestination.month))
+                    navController.navigate("${TotalIncomeDestination.route}/$month/$year/$isIncome")
+                },
                 navigateToAddItem = { category ->
                     navController.navigate(
                         "${AddingItemDestination.route}/$category"
@@ -241,6 +246,10 @@ fun AppNavHost (
         ) {
             TotalIncomeScreenForYear(
                 navigateBack = {navController.popBackStack()},
+                navigateToTransactionType = { isIncome ->
+                    val year = checkNotNull(it.arguments?.getInt(TotalIncomeDestinationForYear.year.toString()))
+                    navController.navigate("${TotalIncomeDestinationForYear.route}/$year/$isIncome")
+                },
                 navigateToAddItem = { category ->
                     navController.navigate(
                         "${AddingItemDestination.route}/$category"

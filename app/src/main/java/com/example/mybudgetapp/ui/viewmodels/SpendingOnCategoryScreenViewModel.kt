@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.Month
 
 class SpendingOnCategoryScreenViewModel(
     private val itemRepository: ItemRepository,
@@ -42,15 +43,22 @@ class SpendingOnCategoryScreenViewModel(
             year = currentYear,
         )
     ) { itemList, totalCategory, totalSpending ->
+        val mappedItems = itemList.map { it.toSpendingOnCategoryItem() }
+        val averageAmount = if (itemList.isEmpty()) 0.0 else totalCategory / itemList.size
+        val biggestAmount = itemList.maxOfOrNull { it.amount } ?: 0.0
         SpendingOnCategoryUiState(
             totalSpending = formatCurrencyIraqiDinar(totalSpending),
             totalCategory = formatCurrencyIraqiDinar(totalCategory),
             spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
-            itemList = itemList.map { it.toSpendingOnCategoryItem() },
+            itemList = mappedItems,
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
             category = category.capitalized(),
             sentCategory = category,
-            isDeleteDialogVisible = isDeleteDialogVisible.value
+            periodLabel = "${Month.of(currentMonthValue).name.capitalized()} $currentYear",
+            transactionCount = itemList.size,
+            averageTransaction = formatCurrencyIraqiDinar(averageAmount),
+            biggestTransaction = formatCurrencyIraqiDinar(biggestAmount),
+            isDeleteDialogVisible = isDeleteDialogVisible.value,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -79,9 +87,13 @@ data class SpendingOnCategoryUiState(
     val isThisMonthCurrent: Boolean = true,
     val category: String = "",
     val sentCategory: String = "",
+    val periodLabel: String = "",
     val totalSpending: String = "",
     val totalCategory: String = "",
     val spendingRatio: Float = 0f,
+    val transactionCount: Int = 0,
+    val averageTransaction: String = "",
+    val biggestTransaction: String = "",
     val itemList: List<SpendingOnCategoryItem> = listOf()
 )
 
@@ -90,6 +102,7 @@ data class SpendingOnCategoryItem(
     val name: String = "",
     val date: String = "",
     val totalCost: String = "",
+    val amountValue: Double = 0.0,
     val itemId: Long = 0
 )
 
@@ -99,5 +112,6 @@ fun BudgetTransaction.toSpendingOnCategoryItem(): SpendingOnCategoryItem =
         imagePath = picturePath,
         name = displayTitle(),
         date = transactionDate,
-        totalCost = formatCurrencyIraqiDinar(amount)
+        totalCost = formatCurrencyIraqiDinar(amount),
+        amountValue = amount,
     )

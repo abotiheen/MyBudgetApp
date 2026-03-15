@@ -82,6 +82,7 @@ data class SpendingItem(
     val name: String = "",
     val date: String = "",
     val totalCost: String = "",
+    val amountValue: Double = 0.0,
     val category: String = "",
     val itemId: Long = 0
 )
@@ -92,6 +93,7 @@ fun BudgetTransaction.toSpendingItem(): SpendingItem =
         name = displayTitle(),
         date = transactionDate,
         totalCost = formatCurrencyIraqiDinar(amount),
+        amountValue = amount,
         category = category,
         itemId = transactionId
     )

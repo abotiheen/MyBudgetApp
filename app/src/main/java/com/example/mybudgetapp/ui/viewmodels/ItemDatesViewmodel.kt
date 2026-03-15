@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_INCOME
 import com.example.mybudgetapp.database.displayTitle
 import com.example.mybudgetapp.ui.screens.ItemDatesScreenNavigationDestination
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,8 +26,11 @@ class ItemDatesViewModel(
             ItemDatesUiState(
                 itemDatesList = listOf(transaction.toItemWithDates()),
                 category = transaction.category,
+                categoryLabel = transaction.category.replaceFirstChar { it.uppercase() },
                 name = transaction.displayTitle(),
                 date = transaction.transactionDate,
+                amount = formatCurrencyIraqiDinar(transaction.amount),
+                typeLabel = if (transaction.type == TRANSACTION_TYPE_INCOME) "Income" else "Expense",
                 picturePath = transaction.picturePath,
             )
         }
@@ -44,8 +48,11 @@ class ItemDatesViewModel(
 data class ItemDatesUiState(
     val itemDatesList: List<ItemWIthDates> = listOf(),
     val category: String = "",
+    val categoryLabel: String = "",
     val picturePath: String? = null,
     val date: String = "",
+    val amount: String = "",
+    val typeLabel: String = "",
     val name: String = "",
 )
 

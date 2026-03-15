@@ -40,14 +40,21 @@ class SpendingOnCategoryForYearScreenViewModel(
             year = currentYear,
         )
     ) { itemList, totalCategory, totalSpending ->
+        val mappedItems = itemList.map { it.toSpendingOnCategoryItem() }
+        val averageAmount = if (itemList.isEmpty()) 0.0 else totalCategory / itemList.size
+        val biggestAmount = itemList.maxOfOrNull { it.amount } ?: 0.0
         SpendingOnCategoryUiState(
             totalSpending = formatCurrencyIraqiDinar(totalSpending),
             totalCategory = formatCurrencyIraqiDinar(totalCategory),
             spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
-            itemList = itemList.map { it.toSpendingOnCategoryItem() },
+            itemList = mappedItems,
             isThisMonthCurrent = isThisYearCurrent,
             category = category.capitalized(),
             sentCategory = category,
+            periodLabel = currentYear.toString(),
+            transactionCount = itemList.size,
+            averageTransaction = formatCurrencyIraqiDinar(averageAmount),
+            biggestTransaction = formatCurrencyIraqiDinar(biggestAmount),
             isDeleteDialogVisible = isDeleteDialogVisible.value
         )
     }.stateIn(

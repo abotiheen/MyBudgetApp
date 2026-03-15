@@ -1,7 +1,6 @@
 package com.example.mybudgetapp.ui.widgets
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -11,6 +10,7 @@ import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,6 +27,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,99 +46,94 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
 import com.example.mybudgetapp.data.SpendingCategoryDisplayData
-import com.example.mybudgetapp.ui.theme.inter
 
 @Composable
-fun TotalSpendingText (
+fun TotalSpendingText(
     @StringRes spendingOn: Int,
     category: String,
     totalSpending: String,
 ) {
-        Column (
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = stringResource(id = spendingOn, category),
-                fontFamily = inter,
-                fontWeight = FontWeight.Thin,
-                fontSize = 16.sp
-            )
-            Text(
-                text = totalSpending,
-                fontFamily = inter,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
+    Column(
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(id = spendingOn, category),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = totalSpending,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 }
 
 @Composable
 fun SpendingProgress(
     totalSpending: String,
     totalSpendingOnCategory: String,
-    category:String,
+    category: String,
     spendingRatio: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    Card (
-        elevation = CardDefaults.cardElevation(8.dp),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Color.Black) ,
-        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
-        modifier = Modifier
+    Card(
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(6.dp),
+        modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .then(modifier)
+            .wrapContentHeight(),
     ) {
-        Column (
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Column(
             modifier = Modifier
-                .padding(12.dp)
                 .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row (
+            SectionHeading(
+                title = category,
+                subtitle = "Share of your spending in this period",
+            )
+            Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 TotalSpendingText(
                     spendingOn = R.string.total_spending_text,
                     totalSpending = totalSpendingOnCategory,
-                    category = category
-                    )
-                TotalSpendingText(
-                    spendingOn = R.string.total_spending_on_text,
-                    totalSpending = totalSpending,
-                    category = category
+                    category = category,
                 )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(999.dp),
+                ) {
+                    Text(
+                        text = totalSpending,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             LinearProgressIndicator(
-                progress = spendingRatio,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), // Semi-transparent
-                trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f), // Light background track
+                progress = { spendingRatio.coerceIn(0f, 1f) },
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
-                    .height(6.dp) // Slimmer bar
-                    .clip(RoundedCornerShape(percent = 50)) // Smooth, rounded ends
-                    .background(Color(0xFFE0E0E0)) // Light gray background
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(999.dp)),
             )
         }
-        }
-
-
+    }
 }
 
 @Composable
@@ -149,44 +146,29 @@ fun ItemCard(
     imagePath: String?,
     deleteItem: () -> Unit,
     navigateToItemDates: () -> Unit,
-){
-
-    var isContextMenuVisible by rememberSaveable {
-        mutableStateOf(false)
-    }
-    var isDeleteMenuVisible by rememberSaveable {
-        mutableStateOf(false)
-    }
-    var pressOffset by remember {
-        mutableStateOf(DpOffset.Zero)
-    }
-    var itemHeight by remember {
-        mutableStateOf(0.dp)
-    }
-    val interactionSource = remember {
-        MutableInteractionSource()
-    }
+) {
+    var isContextMenuVisible by rememberSaveable { mutableStateOf(false) }
+    var isDeleteMenuVisible by rememberSaveable { mutableStateOf(false) }
+    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var itemHeight by remember { mutableStateOf(0.dp) }
+    val interactionSource = remember { MutableInteractionSource() }
     val density = LocalDensity.current
 
-    Card (
-        elevation = CardDefaults.cardElevation(8.dp),
-        shape = RoundedCornerShape(24.dp),
-       // border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSecondaryContainer) ,
-        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer) ,
-        modifier = Modifier
+    Card(
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(4.dp),
+        modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .onSizeChanged {
-                itemHeight = with(density) { it.height.toDp() }
-            }
-            .clickable { navigateToItemDates() }
-            .then(modifier),
+            .onSizeChanged { itemHeight = with(density) { it.height.toDp() } }
+            .clickable { navigateToItemDates() },
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(8.dp)
+                .padding(12.dp)
                 .fillMaxWidth()
                 .indication(interactionSource, LocalIndication.current)
                 .pointerInput(true) {
@@ -201,111 +183,71 @@ fun ItemCard(
                             tryAwaitRelease()
                             interactionSource.emit(PressInteraction.Release(press))
                         },
-                        onTap = {
-                            navigateToItemDates()
-                        }
+                        onTap = { navigateToItemDates() },
                     )
-                }
+                },
         ) {
-            Row (
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-            ){
-
-                Card (
-                    elevation = CardDefaults.cardElevation(2.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.size(72.dp),
-                    colors = CardDefaults.cardColors(colorResource(id = displayItem.cardColor))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(68.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(colorResource(id = displayItem.cardColor)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        AsyncImage(
-                            model = imagePath,
-                            contentDescription = null,
-                            placeholder = painterResource(id = displayItem.spendingIcon),
-                            error = painterResource(id = displayItem.spendingIcon),
-                            contentScale = ContentScale.FillBounds
-                        )
-                    }
-
-                }
-
-                Column (
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = title,
-                        fontFamily = inter,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp
+                    AsyncImage(
+                        model = imagePath,
+                        contentDescription = null,
+                        placeholder = painterResource(id = displayItem.spendingIcon),
+                        error = painterResource(id = displayItem.spendingIcon),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium)
                     Text(
                         text = date,
-                        fontFamily = inter,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-
             }
-
             Text(
                 text = totalSpending,
-                fontFamily = inter,
-                fontWeight = FontWeight.Normal,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                style = MaterialTheme.typography.titleMedium,
             )
         }
         DropdownMenu(
-            expanded = isContextMenuVisible ,
-            onDismissRequest = {isContextMenuVisible = false},
-            offset = pressOffset.copy (
-                y = pressOffset.y - itemHeight
-            ),
-            modifier = Modifier.padding(8.dp)
+            expanded = isContextMenuVisible,
+            onDismissRequest = { isContextMenuVisible = false },
+            offset = pressOffset.copy(y = pressOffset.y - itemHeight),
+            modifier = Modifier.padding(8.dp),
         ) {
-           /* DropdownMenuItem(
-                text = {
-                    Text(
-                        text = stringResource(id = R.string.edit_item),
-                        fontFamily = inter,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp
-                    )
-                },
-                onClick = { 
-                    isContextMenuVisible = false
-                }
-            )*/
             DropdownMenuItem(
                 text = {
                     Text(
                         text = stringResource(id = R.string.delete_item),
-                        fontFamily = inter,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp
-                        )
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 },
                 onClick = {
                     isDeleteMenuVisible = true
                     isContextMenuVisible = false
-                }
+                },
             )
         }
     }
-    if(isDeleteMenuVisible) {
+    if (isDeleteMenuVisible) {
         DeleteConfirmationDialog(
-            onDeleteCancel = {isDeleteMenuVisible = false} ,
+            onDeleteCancel = { isDeleteMenuVisible = false },
             onDeleteConfirm = {
                 deleteItem()
                 isDeleteMenuVisible = false
-            } ,
+            },
         )
     }
 }
@@ -317,33 +259,30 @@ fun TotalIncomeCard(
     totalSpending: String,
     month: String,
 ) {
-
     Card(
-        elevation = CardDefaults.cardElevation(8.dp),
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primary),
+        elevation = CardDefaults.cardElevation(6.dp),
+        modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .then(modifier),
+            .wrapContentHeight(),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround,
+            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 52.dp)
+                .padding(horizontal = 20.dp, vertical = 24.dp),
         ) {
             Text(
                 text = stringResource(id = title, month),
-                fontFamily = inter,
-                fontWeight = FontWeight.Normal,
-                fontSize = 18.sp
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.74f),
             )
             Text(
                 text = totalSpending,
-                fontFamily = inter,
-                fontWeight = FontWeight.Black,
-                fontSize = 20.sp
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onPrimary,
             )
         }
     }
@@ -354,53 +293,29 @@ fun DateCard(
     modifier: Modifier = Modifier,
     title: String,
     totalSpending: String,
-){
-
-    Card (
-        elevation = CardDefaults.cardElevation(8.dp),
+) {
+    Card(
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSecondaryContainer) ,
-        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer) ,
-        modifier = Modifier
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(4.dp),
+        modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .then(modifier),
+            .wrapContentHeight(),
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
+                .padding(18.dp)
+                .fillMaxWidth(),
         ) {
-            Row (
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ){
-
-                Column (
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = title,
-                        fontFamily = inter,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp
-                    )
-                }
-
-            }
-
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = totalSpending,
-                fontFamily = inter,
-                fontWeight = FontWeight.Normal,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
-
     }
 }
 
@@ -410,95 +325,46 @@ fun ItemCardForDates(
     title: String,
     displayItem: SpendingCategoryDisplayData,
     imagePath: String?,
-    ){
-
-
-
-
-    Card (
-        elevation = CardDefaults.cardElevation(8.dp),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSecondaryContainer) ,
-        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer) ,
-        modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(4.dp),
+        modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .then(modifier),
+            .wrapContentHeight(),
     ) {
         Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth()
+                .padding(12.dp)
+                .fillMaxWidth(),
         ) {
-            Row (
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ){
-
-                Card (
-                    elevation = CardDefaults.cardElevation(2.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.size(72.dp),
-                    colors = CardDefaults.cardColors(colorResource(id = displayItem.cardColor))
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        if(imagePath != null){
-                            AsyncImage(
-                                model = imagePath,
-                                contentDescription = null,
-                                placeholder = painterResource(id = displayItem.spendingIcon) ,
-                                error = painterResource(id = displayItem.spendingIcon),
-                                contentScale = ContentScale.FillBounds
-                            )
-                        } else {
-                           Image(painter = painterResource(id = displayItem.spendingIcon), contentDescription = null)
-                    }
-
-                    }
-
-                }
-
-                Column (
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = title,
-                        fontFamily = inter,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(colorResource(id = displayItem.cardColor)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (imagePath != null) {
+                    AsyncImage(
+                        model = imagePath,
+                        contentDescription = null,
+                        placeholder = painterResource(id = displayItem.spendingIcon),
+                        error = painterResource(id = displayItem.spendingIcon),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = displayItem.spendingIcon),
+                        contentDescription = null,
                     )
                 }
-
             }
+            Text(text = title, style = MaterialTheme.typography.titleLarge)
         }
     }
 }
-
-@Preview
-@Composable
-fun TotalSpendingPreview(){
-
-}
-@Preview
-@Composable
-fun TotalSpendingCardPreview(){
-
-}
-@Preview
-@Composable
-fun itemCardPreview(){
-   // ItemCard(title = R.string.other_spending, totalSpending = "4$", item = SpendingCategoryDisplayObject.items[0] )
-}
-@Preview
-@Composable
-fun DateCardPreview(){
-    DateCard(title = "hello", totalSpending = "100" )
-}
-

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.ItemRepository
+import com.example.mybudgetapp.database.displayTitle
 import com.example.mybudgetapp.ui.widgets.DropDownItem
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,6 +63,11 @@ class ThisYearScreenViewModel(
             val selectedIndex = years.indexOf(currentYear)
             val monthMap = monthlyTotals.associate { it.month to it.total }
             ThisYearScreenUiState(
+                totalSpendingAmountForYear = totals.totalSpending,
+                totalIncomeAmountForYear = totals.totalIncome,
+                totalFoodAmountForYear = totals.totalFood,
+                totalTransportationAmountForYear = totals.totalTransportation,
+                totalOthersAmountForYear = totals.totalOthers,
                 totalSpendingForYear = formatCurrencyIraqiDinar(totals.totalSpending),
                 totalIncomeForYear = formatCurrencyIraqiDinar(totals.totalIncome),
                 totalSpendingOnFoodForYear = formatCurrencyIraqiDinar(totals.totalFood),
@@ -82,6 +88,15 @@ class ThisYearScreenViewModel(
                 spendingTrend = buildYearTrendPoints(monthMap),
                 comparison = buildYearlyComparison(totals.totalSpending, previousYearTotal, currentYear),
                 insights = yearInsights(transactions, totals.totalSpending, currentYear),
+                recentTransactions = transactions.take(4).map { transaction ->
+                    HomeTransactionPreview(
+                        title = transaction.displayTitle(),
+                        categoryKey = transaction.category,
+                        category = categoryLabel(transaction.category),
+                        amount = formatCurrencyIraqiDinar(transaction.amount),
+                        date = transaction.transactionDate,
+                    )
+                },
             )
         }
     }.stateIn(
@@ -140,6 +155,11 @@ data class ThisYearScreenUiState(
     val currentMonth: String = "",
     val selectedYear: Int = 0,
     val currentYear: String = "",
+    val totalSpendingAmountForYear: Double = 0.0,
+    val totalIncomeAmountForYear: Double = 0.0,
+    val totalFoodAmountForYear: Double = 0.0,
+    val totalTransportationAmountForYear: Double = 0.0,
+    val totalOthersAmountForYear: Double = 0.0,
     val totalSpendingForYear: String = "",
     val totalIncomeForYear: String = "",
     val totalSpendingOnFoodForYear: String = "",
@@ -152,5 +172,6 @@ data class ThisYearScreenUiState(
     val spendingTrend: List<TrendPointUi> = emptyList(),
     val comparison: ComparisonInsightUi = ComparisonInsightUi(),
     val insights: List<StatInsightUi> = emptyList(),
+    val recentTransactions: List<HomeTransactionPreview> = emptyList(),
     val screenItemsUiState: MutableState<ScreenItemsUiState> = mutableStateOf(ScreenItemsUiState())
 )
