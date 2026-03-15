@@ -10,10 +10,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mybudgetapp.database.Item
+import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
-import com.example.mybudgetapp.database.PurchaseDetails
 import com.example.mybudgetapp.database.RecentEntryTemplate
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_INCOME
+import com.example.mybudgetapp.database.defaultTransactionTitle
 import com.example.mybudgetapp.ui.screens.AddingItemDestination
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +26,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -54,7 +54,7 @@ class AddingItemScreenViewModel(
         .map { templates ->
             templates
                 .filter(::matchesCurrentEntryContext)
-                .distinctBy { it.name.lowercase(Locale.ROOT) to it.category }
+                .distinctBy { (it.title ?: defaultTransactionTitle(it.category, it.type)).lowercase(Locale.ROOT) to it.category }
                 .map { it.toUiModel() }
         }
         .stateIn(
@@ -94,37 +94,14 @@ class AddingItemScreenViewModel(
 
     suspend fun saveEntry(stayOnScreen: Boolean): SaveEntryResult {
         val currentDate = LocalDate.now()
-        val normalizedName = uiState.itemDetails.name.trim()
         val resolvedCategory = resolveCategory(uiState.itemDetails.category)
-        val resolvedName = normalizedName.ifBlank { generateQuickName(resolvedCategory) }
-        val detailsToSave = uiState.itemDetails.copy(
-            name = resolvedName,
-            category = resolvedCategory,
-        )
+        val detailsToSave = uiState.itemDetails.copy(category = resolvedCategory)
 
         if (!validateInput(detailsToSave)) {
             return SaveEntryResult.Invalid
         }
 
-        var itemId = itemRepository.getItemIdFromName(resolvedName)
-        if (itemId == null) {
-            itemId = itemRepository.insertItem(detailsToSave.toItem(currentDate.toString()))
-        } else {
-            itemRepository.updateItemDateWithId(currentDate.toString(), itemId)
-        }
-
-        detailsToSave.imagePath?.let { path ->
-            itemRepository.updateItemImagePathWithId(path, itemId)
-        }
-
-        itemRepository.insetPurchaseDetails(
-            detailsToSave.toPurchaseDetails(
-                date = currentDate.toString(),
-                year = currentDate.year,
-                itemId = itemId,
-                month = currentDate.monthValue,
-            )
-        )
+        itemRepository.insertTransaction(detailsToSave.toTransaction(currentDate.toString()))
 
         if (stayOnScreen) {
             resetForNextEntry(detailsToSave.category)
@@ -171,20 +148,9 @@ class AddingItemScreenViewModel(
         }
     }
 
-    private fun generateQuickName(category: String): String {
-        val label = when (category) {
-            "food" -> "Food"
-            "transportation" -> "Transit"
-            "income" -> "Income"
-            else -> "Expense"
-        }
-        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT))
-        return "$label $timestamp"
-    }
-
     private fun matchesCurrentEntryContext(template: RecentEntryTemplate): Boolean {
         return when (previousCategory) {
-            "all" -> template.category != "income"
+            "all" -> template.type != TRANSACTION_TYPE_INCOME
             else -> template.category == previousCategory
         }
     }
@@ -257,24 +223,18 @@ enum class SaveEntryResult {
     SavedAndReadyForNext,
 }
 
-fun ItemDetails.toItem(date: String): Item = Item(
-    itemId = id,
-    name = name,
+fun ItemDetails.toTransaction(date: String): BudgetTransaction = BudgetTransaction(
+    transactionId = id,
+    title = name.trim().takeIf { it.isNotEmpty() },
+    amount = cost.toDouble(),
     category = category,
+    type = if (category == "income") TRANSACTION_TYPE_INCOME else TRANSACTION_TYPE_EXPENSE,
+    transactionDate = date,
     picturePath = imagePath,
-    date = date,
-)
-
-fun ItemDetails.toPurchaseDetails(month: Int, year: Int, date: String, itemId: Long) = PurchaseDetails(
-    itemId = itemId,
-    cost = cost.toDouble(),
-    month = month,
-    year = year,
-    purchaseDate = date,
 )
 
 private fun RecentEntryTemplate.toUiModel(): RecentTemplateUiModel = RecentTemplateUiModel(
-    name = name,
+    name = title?.takeIf { it.isNotBlank() } ?: defaultTransactionTitle(category, type),
     category = category,
-    cost = cost.toString(),
+    cost = amount.toString(),
 )

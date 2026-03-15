@@ -7,8 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
-import com.example.mybudgetapp.database.ItemWithPurchaseDetails
+import com.example.mybudgetapp.database.displayTitle
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,7 +24,7 @@ import java.util.Locale
 class SpendingOnCategoryScreenViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
-): ViewModel(){
+) : ViewModel() {
 
     val date: LocalDate = LocalDate.now()
     private val currentMonth: String = checkNotNull(savedStateHandle[SpendingOnCategoryDestination.month])
@@ -32,23 +33,17 @@ class SpendingOnCategoryScreenViewModel(
     private var isThisMonthCurrent: Boolean = true
     private var isDeleteDialogVisible = MutableStateFlow(false)
 
-
     init {
         isThisMonthCurrent = (date.monthValue == currentMonthValue)
     }
 
-
-
-    var uiState: StateFlow<SpendingOnCategoryUiState> = combine (
-        //fetching the items that will be displayed in the cards
-            itemRepository.getItemWithPurchaseDetailsForCategory(month = currentMonthValue!! , year = date.year, category =  category),
-        //fetching the total for the selected category
+    var uiState: StateFlow<SpendingOnCategoryUiState> = combine(
+        itemRepository.getTransactionsByCategory(month = currentMonthValue!!, year = date.year, category = category),
         itemRepository.getTotalSpendingOnCategory(
             month = currentMonthValue,
             year = date.year,
             category = category
         ),
-        //fetching the total for the overall spending
         itemRepository.getTotalSpendingOverall(
             month = currentMonthValue,
             year = date.year,
@@ -57,13 +52,12 @@ class SpendingOnCategoryScreenViewModel(
         SpendingOnCategoryUiState(
             totalSpending = formatCurrencyIraqiDinar(totalSpending),
             totalCategory = formatCurrencyIraqiDinar(totalCategory),
-            spendingRatio = totalCategory.toFloat()/totalSpending.toFloat(),
+            spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
             itemList = itemList.map { it.toSpendingOnCategoryItem() },
             isThisMonthCurrent = isThisMonthCurrent,
             category = category.capitalized(),
             sentCategory = category,
             isDeleteDialogVisible = isDeleteDialogVisible.value
-
         )
     }.stateIn(
         scope = viewModelScope,
@@ -71,31 +65,21 @@ class SpendingOnCategoryScreenViewModel(
         initialValue = SpendingOnCategoryUiState()
     )
 
-
-
-     fun deleteItem(itemId: Long){
-         viewModelScope.launch {
-             itemRepository.deleteItemWithId(itemId)
-         }
+    fun deleteItem(itemId: Long) {
+        viewModelScope.launch {
+            itemRepository.deleteTransactionWithId(itemId)
+        }
     }
 
     fun displayConfirmDelete(isIt: Boolean, context: Context) {
         isDeleteDialogVisible.value = isIt
-        Toast.makeText(context, "this is ${uiState.value.isDeleteDialogVisible} but $isIt", Toast.LENGTH_SHORT ).show()
-
+        Toast.makeText(context, "this is ${uiState.value.isDeleteDialogVisible} but $isIt", Toast.LENGTH_SHORT).show()
     }
-
-
-
-
 
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }
 }
-
-
-
 
 data class SpendingOnCategoryUiState(
     val isDeleteDialogVisible: Boolean = false,
@@ -116,20 +100,20 @@ data class SpendingOnCategoryItem(
     val itemId: Long = 0
 )
 
-fun ItemWithPurchaseDetails.toSpendingOnCategoryItem() : SpendingOnCategoryItem =
-     SpendingOnCategoryItem(
-         itemId = item.itemId ,
-         imagePath = item.picturePath,
-         name = item.name,
-         date = item.date,
-         totalCost = formatCurrencyIraqiDinar(totalCost)
-     )
+fun BudgetTransaction.toSpendingOnCategoryItem(): SpendingOnCategoryItem =
+    SpendingOnCategoryItem(
+        itemId = transactionId,
+        imagePath = picturePath,
+        name = displayTitle(),
+        date = transactionDate,
+        totalCost = formatCurrencyIraqiDinar(amount)
+    )
+
 fun getMonthNumber(monthName: String): Int? {
     return try {
-        val month = Month.valueOf(monthName.uppercase(Locale.ROOT)) // Convert the month name to uppercase and get the corresponding Month enum
-        month.value // Get the value of the Month enum, which represents the month number (1 for January, 2 for February, etc.)
+        val month = Month.valueOf(monthName.uppercase(Locale.ROOT))
+        month.value
     } catch (e: IllegalArgumentException) {
-        null // Return null if the month name is invalid
+        null
     }
 }
-

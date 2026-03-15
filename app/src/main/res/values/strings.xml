@@ -27,8 +27,8 @@
     <string name="adding_item_screen_title">Add %s Item</string>
     <string name="delete_item">Delete</string>
     <string name="edit_item">Edit</string>
-    <string name="item_dates">Item Details</string>
-    <string name="item_dates_body">This item was added on:</string>
+    <string name="item_dates">Entry Details</string>
+    <string name="item_dates_body">This entry was recorded on:</string>
     <string name="total_income_screen_body">Your %s</string>
     <string name="quick_add_title">Quick entry</string>
     <string name="quick_add_subtitle">Amount first. Everything else can stay minimal.</string>

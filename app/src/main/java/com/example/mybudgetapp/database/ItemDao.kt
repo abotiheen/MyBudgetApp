@@ -8,195 +8,160 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
-data class RecentEntryTemplate(
-    val name: String,
-    val category: String,
-    val cost: Double,
-)
-
 @Dao
-interface ItemDao {
+interface TransactionDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertItem(item: Item): Long
+    suspend fun insertTransaction(transaction: BudgetTransaction): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertItems(items: List<Item>)
+    suspend fun insertTransactions(transactions: List<BudgetTransaction>)
 
-    @Update(onConflict = OnConflictStrategy.ABORT)
-    suspend fun updateItem(item: Item)
-
-    @Delete
-    suspend fun deleteItem(item: Item)
-
-    @Query("Select itemId from budget_item where LOWER(name) = LOWER(:name) ")
-    suspend fun getIdFromName(name: String): Long?
-
-    @Query("Select * from budget_item where itemId = :id ")
-    fun getItemFromId(id: Long): Flow<Item>
-
-    @Query("""
-        update budget_item
-        set date = :date
-        where itemId = :id
-        """)
-    suspend fun updateItemDateWithId(date:String, id: Long)
-
-    @Query("""
-        delete from budget_item
-        where itemId = :id
-        """)
-    suspend fun deleteItemWithId(id: Long)
-
-    @Query("""
-        update budget_item
-        set picturePath = :imagePath
-        where itemId = :id
-        """)
-    suspend fun updateItemImagePathWithId(imagePath:String, id: Long)
-
-    @Query("select * from budget_item order by itemId asc")
-    suspend fun getAllItems(): List<Item>
-
-}
-
-@Dao
-interface PurchaseDetailsDao {
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertItem(purchaseDetails: PurchaseDetails)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertItems(purchaseDetails: List<PurchaseDetails>)
-
-    @Update(onConflict = OnConflictStrategy.ABORT)
-    suspend fun updateItem(purchaseDetails: PurchaseDetails)
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateTransaction(transaction: BudgetTransaction)
 
     @Delete
-    suspend fun deleteItem(purchaseDetails: PurchaseDetails)
+    suspend fun deleteTransaction(transaction: BudgetTransaction)
 
+    @Query("delete from transactions where transactionId = :id")
+    suspend fun deleteTransactionWithId(id: Long)
 
-    @Query("""
-        select distinct month from purchase_details
-         where year = :year
-         order by month asc
-    """)
-    fun getAllMonths(year: Int): Flow<List<Int>>
+    @Query("select * from transactions where transactionId = :id")
+    fun getTransaction(id: Long): Flow<BudgetTransaction>
 
-    @Query("""
-        select distinct year from purchase_details
-         order by year asc
-    """)
-    fun getAllYears(): Flow<List<Int>>
+    @Query("select * from transactions order by transactionDate desc, transactionId desc")
+    suspend fun getAllTransactions(): List<BudgetTransaction>
 
-    @Query("select * from purchase_details order by purchaseId asc")
-    suspend fun getAllPurchaseDetails(): List<PurchaseDetails>
-
-    @Query("""
-        select i.name as name, i.category as category, p.cost as cost
-        from purchase_details as p
-        join budget_item as i on i.itemId = p.itemId
-        order by p.purchaseId desc
+    @Query(
+        """
+        select title, category, amount, type
+        from transactions
+        order by transactionDate desc, transactionId desc
         limit :limit
-    """)
+        """
+    )
     fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>
 
+    @Query(
+        """
+        select distinct cast(strftime('%m', transactionDate) as integer)
+        from transactions
+        where cast(strftime('%Y', transactionDate) as integer) = :year
+        order by cast(strftime('%m', transactionDate) as integer) asc
+        """
+    )
+    fun getAllMonths(year: Int): Flow<List<Int>>
 
+    @Query(
+        """
+        select distinct cast(strftime('%Y', transactionDate) as integer)
+        from transactions
+        order by cast(strftime('%Y', transactionDate) as integer) asc
+        """
+    )
+    fun getAllYears(): Flow<List<Int>>
 
-}
+    @Query(
+        """
+        select * from transactions
+        where type = :type
+          and cast(strftime('%m', transactionDate) as integer) = :month
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsByType(month: Int, year: Int, type: String): Flow<List<BudgetTransaction>>
 
-@Dao
-interface ItemWithPurchaseDetailsDao {
-    @Query("""
-        select i.itemId, i.name, i.category, i.picturePath, i.date, sum(p.cost) as totalCost
-        from budget_item as i
-        left join purchase_details as p
-        on i.itemId = p.itemId
-        where p.month = :month and p.year = :year and i.category != "income"
-        group by i.itemId, i.name, i.category, i.picturePath, i.date
-    """)
-    fun getAllItemsWithPurchaseDetails(month: Int, year: Int): Flow<List<ItemWithPurchaseDetails>>
+    @Query(
+        """
+        select * from transactions
+        where type = :type
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsByTypeForYear(year: Int, type: String): Flow<List<BudgetTransaction>>
 
-    @Query("""
-        select i.itemId, i.name, i.category, i.picturePath, i.date, sum(p.cost) as totalCost
-        from budget_item as i
-        left join purchase_details as p
-        on i.itemId = p.itemId
-        where p.year = :year and i.category != "income"
-        group by i.itemId, i.name, i.category, i.picturePath, i.date
-    """)
-    fun getAllItemsWithPurchaseDetailsForYear(year: Int): Flow<List<ItemWithPurchaseDetails>>
-    @Query("""
-        select i.itemId, i.name, i.category, i.picturePath, i.date, sum(p.cost) as totalCost
-        from budget_item as i
-        left join purchase_details as p
-        on i.itemId = p.itemId
-        where p.month = :month and p.year = :year and i.category = :category
-        group by i.itemId, i.name, i.category, i.picturePath, i.date
-    """)
-    fun getAllItemsWithPurchaseDetailsForCategory(month: Int, year: Int, category: String): Flow<List<ItemWithPurchaseDetails>>
+    @Query(
+        """
+        select * from transactions
+        where category = :category
+          and cast(strftime('%m', transactionDate) as integer) = :month
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsByCategory(month: Int, year: Int, category: String): Flow<List<BudgetTransaction>>
 
-    @Query("""
-        select i.itemId, i.name, i.category, i.picturePath, i.date, sum(p.cost) as totalCost
-        from budget_item as i
-        left join purchase_details as p
-        on i.itemId = p.itemId
-        where p.year = :year and i.category = :category
-        group by i.itemId, i.name, i.category, i.picturePath, i.date
-    """)
-    fun getAllItemsWithPurchaseDetailsForCategoryForYear(year: Int, category: String): Flow<List<ItemWithPurchaseDetails>>
+    @Query(
+        """
+        select * from transactions
+        where category = :category
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsByCategoryForYear(year: Int, category: String): Flow<List<BudgetTransaction>>
 
-    @Query("""
-        select sum(p.cost) from purchase_details as p
-        join budget_item as i 
-        on i.itemId = p.itemId
-        where i.category = :category and p.year = :year and p.month = :month
-    """)
+    @Query(
+        """
+        select ifnull(sum(amount), 0)
+        from transactions
+        where category = :category
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+          and cast(strftime('%m', transactionDate) as integer) = :month
+        """
+    )
     fun getTotalSpendingOnCategory(category: String, year: Int, month: Int): Flow<Double>
 
-
-    @Query("""
-        select sum(p.cost) from purchase_details as p
-        join budget_item as i 
-        on i.itemId = p.itemId
-        where  p.year = :year and p.month = :month and i.category != "income"
-    """)
+    @Query(
+        """
+        select ifnull(sum(amount), 0)
+        from transactions
+        where type = 'expense'
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+          and cast(strftime('%m', transactionDate) as integer) = :month
+        """
+    )
     fun getTotalSpendingOverall(year: Int, month: Int): Flow<Double>
 
-    @Query("""
-        select sum(p.cost) from purchase_details as p
-        join budget_item as i 
-        on i.itemId = p.itemId
-        where  p.year = :year and p.month = :month and i.category = "income"
-    """)
+    @Query(
+        """
+        select ifnull(sum(amount), 0)
+        from transactions
+        where type = 'income'
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+          and cast(strftime('%m', transactionDate) as integer) = :month
+        """
+    )
     fun getTotalIncomeOverall(year: Int, month: Int): Flow<Double>
 
-    @Query("""
-        select sum(p.cost) from purchase_details as p
-        join budget_item as i 
-        on i.itemId = p.itemId
-        where i.category = :category and p.year = :year
-    """)
+    @Query(
+        """
+        select ifnull(sum(amount), 0)
+        from transactions
+        where category = :category
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        """
+    )
     fun getTotalSpendingOnCategoryForYear(category: String, year: Int): Flow<Double>
 
-    @Query("""
-        select sum(p.cost) from purchase_details as p
-        join budget_item as i 
-        on i.itemId = p.itemId
-        where  p.year = :year and i.category != "income"
-    """)
+    @Query(
+        """
+        select ifnull(sum(amount), 0)
+        from transactions
+        where type = 'expense'
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        """
+    )
     fun getTotalSpendingOverallForYear(year: Int): Flow<Double>
 
-    @Query("""
-        select sum(p.cost) from purchase_details as p
-        join budget_item as i 
-        on i.itemId = p.itemId
-        where  p.year = :year and i.category = "income"
-        order by purchaseDate ASC
-    """)
+    @Query(
+        """
+        select ifnull(sum(amount), 0)
+        from transactions
+        where type = 'income'
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        """
+    )
     fun getTotalIncomeOverallForYear(year: Int): Flow<Double>
-    @Query("""
-        select * from purchase_details
-        where itemId = :id
-        order by purchaseDate ASC
-    """)
-    fun getALlDatesForAnItem(id: Long): Flow<List<PurchaseDetails>>
 }

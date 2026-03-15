@@ -14,7 +14,7 @@ interface AppContainer {
     val cloudBackupRepository: CloudBackupRepository
 }
 
-class AppDataContainer(context: Context): AppContainer {
+class AppDataContainer(context: Context) : AppContainer {
     private val database: BudgetDatabase by lazy {
         BudgetDatabase.getDatabase(context)
     }
@@ -25,9 +25,7 @@ class AppDataContainer(context: Context): AppContainer {
 
     override val itemRepository: ItemRepository by lazy {
         OfflineRepository(
-            itemDao = database.itemDao(),
-            purchaseDetailsDao = database.purchaseDetailsDao(),
-            itemWithPurchaseDetailsDao = database.itemWithPurchaseDetailsDao()
+            transactionDao = database.transactionDao(),
         )
     }
 
@@ -42,5 +40,4 @@ class AppDataContainer(context: Context): AppContainer {
             sessionStore = sessionStore,
         )
     }
-
 }

@@ -4,50 +4,42 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
-import com.example.mybudgetapp.database.PurchaseDetails
+import com.example.mybudgetapp.database.displayTitle
 import com.example.mybudgetapp.ui.screens.ItemDatesScreenNavigationDestination
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 class ItemDatesViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
-): ViewModel(){
-
+) : ViewModel() {
 
     private val id: Long = checkNotNull(savedStateHandle[ItemDatesScreenNavigationDestination.id.toString()])
 
-
-    val uiState: StateFlow<ItemDatesUiState> = combine(
-        itemRepository.getItemDates(id),
-        itemRepository.getItemFromId(id)
-    ) { dates, item ->
-        ItemDatesUiState (
-            itemDatesList = dates.map { it.toItemWithDates() },
-            category = item.category,
-            name = item.name,
-            date = item.date,
-            picturePath = item.picturePath
+    val uiState: StateFlow<ItemDatesUiState> = itemRepository.getTransaction(id)
+        .map { transaction ->
+            ItemDatesUiState(
+                itemDatesList = listOf(transaction.toItemWithDates()),
+                category = transaction.category,
+                name = transaction.displayTitle(),
+                date = transaction.transactionDate,
+                picturePath = transaction.picturePath,
+            )
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+            initialValue = ItemDatesUiState()
         )
-
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
-        initialValue = ItemDatesUiState()
-    )
-
-
-
 
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }
-
 }
-
 
 data class ItemDatesUiState(
     val itemDatesList: List<ItemWIthDates> = listOf(),
@@ -57,16 +49,13 @@ data class ItemDatesUiState(
     val name: String = "",
 )
 
-data class ItemWIthDates (
+data class ItemWIthDates(
     val cost: String = "",
     val date: String = "",
 )
 
-fun PurchaseDetails.toItemWithDates(): ItemWIthDates =
+fun BudgetTransaction.toItemWithDates(): ItemWIthDates =
     ItemWIthDates(
-        cost = formatCurrencyIraqiDinar(cost),
-        date = purchaseDate
+        cost = formatCurrencyIraqiDinar(amount),
+        date = transactionDate
     )
-
-
-

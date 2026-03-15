@@ -18,7 +18,7 @@ import java.time.LocalDate
 class SpendingOnCategoryForYearScreenViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
-): ViewModel(){
+) : ViewModel() {
 
     val date: LocalDate = LocalDate.now()
     private val currentYear: Int = checkNotNull(savedStateHandle[SpendingOnCategoryForYearDestination.year.toString()])
@@ -26,22 +26,16 @@ class SpendingOnCategoryForYearScreenViewModel(
     private var isThisYearCurrent: Boolean = true
     private var isDeleteDialogVisible = MutableStateFlow(false)
 
-
     init {
         isThisYearCurrent = (date.year == currentYear)
     }
 
-
-
-    val uiState: StateFlow<SpendingOnCategoryUiState> = combine (
-        //fetching the items that will be displayed in the cards
-        itemRepository.getItemWithPurchaseDetailsForCategoryForYear(year = currentYear, category =  category),
-        //fetching the total for the selected category
+    val uiState: StateFlow<SpendingOnCategoryUiState> = combine(
+        itemRepository.getTransactionsByCategoryForYear(year = currentYear, category = category),
         itemRepository.getTotalSpendingOnCategoryForYear(
             year = currentYear,
             category = category
         ),
-        //fetching the total for the overall spending
         itemRepository.getTotalSpendingOverallForYear(
             year = currentYear,
         )
@@ -49,13 +43,12 @@ class SpendingOnCategoryForYearScreenViewModel(
         SpendingOnCategoryUiState(
             totalSpending = formatCurrencyIraqiDinar(totalSpending),
             totalCategory = formatCurrencyIraqiDinar(totalCategory),
-            spendingRatio = totalCategory.toFloat()/totalSpending.toFloat(),
+            spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
             itemList = itemList.map { it.toSpendingOnCategoryItem() },
             isThisMonthCurrent = isThisYearCurrent,
             category = category.capitalized(),
             sentCategory = category,
             isDeleteDialogVisible = isDeleteDialogVisible.value
-
         )
     }.stateIn(
         scope = viewModelScope,
@@ -63,28 +56,17 @@ class SpendingOnCategoryForYearScreenViewModel(
         initialValue = SpendingOnCategoryUiState()
     )
 
-
-
-    fun deleteItem(itemId: Long){
+    fun deleteItem(itemId: Long) {
         viewModelScope.launch {
-            itemRepository.deleteItemWithId(itemId)
+            itemRepository.deleteTransactionWithId(itemId)
         }
     }
 
     fun displayConfirmDelete(isIt: Boolean) {
         isDeleteDialogVisible.value = isIt
-
     }
-
-
-
-
 
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }
 }
-
-
-
-

@@ -17,26 +17,27 @@ import java.time.LocalDate
 class TotalSpendingScreenForYearViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
-): ViewModel(){
+) : ViewModel() {
 
     val date: LocalDate = LocalDate.now()
     private val currentYear: Int = checkNotNull(savedStateHandle[TotalIncomeDestinationForYear.year.toString()])
     private val isIncome: Boolean = checkNotNull(savedStateHandle[TotalIncomeDestinationForYear.isIncome.toString()])
     private var isThisYearCurrent = true
     private var isDeleteDialogVisible = MutableStateFlow(false)
+
     init {
         isThisYearCurrent = (date.year == currentYear)
     }
 
     val uiState: StateFlow<TotalSpendingUiState> = combine(
-        itemRepository.getItemWithPurchaseDetailsForYear(year = currentYear),
+        itemRepository.getTransactionsForYear(year = currentYear),
         itemRepository.getTotalSpendingOverallForYear(year = currentYear),
         itemRepository.getTotalIncomeOverallForYear(year = currentYear),
-        itemRepository.getItemWithPurchaseDetailsForCategoryForYear(category = "income", year = currentYear)
-    ){   spendingItems, totalSpending, totalIncome, incomeItems  ->
+        itemRepository.getIncomeTransactionsForYear(year = currentYear)
+    ) { spendingItems, totalSpending, totalIncome, incomeItems ->
         TotalSpendingUiState(
             totalSpending = formatCurrencyIraqiDinar(totalSpending),
-            spendingItemList = spendingItems.map {it.toSpendingItem()},
+            spendingItemList = spendingItems.map { it.toSpendingItem() },
             month = currentYear.toString(),
             isIncome = isIncome,
             totalIncome = formatCurrencyIraqiDinar(totalIncome),
@@ -44,7 +45,6 @@ class TotalSpendingScreenForYearViewModel(
             isThisMonthCurrent = isThisYearCurrent,
             isDeleteDialogVisible = isDeleteDialogVisible.value
         )
-
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
@@ -53,19 +53,15 @@ class TotalSpendingScreenForYearViewModel(
 
     fun deleteItem(itemId: Long) {
         viewModelScope.launch {
-            itemRepository.deleteItemWithId(itemId)
+            itemRepository.deleteTransactionWithId(itemId)
         }
     }
 
     fun displayConfirmDelete(isIt: Boolean) {
         isDeleteDialogVisible.value = isIt
-
     }
-
 
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }
-
 }
-

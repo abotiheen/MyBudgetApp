@@ -1,48 +1,41 @@
 package com.example.mybudgetapp.database
 
-import androidx.room.ColumnInfo
-import androidx.room.Embedded
 import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
+const val TRANSACTION_TYPE_EXPENSE = "expense"
+const val TRANSACTION_TYPE_INCOME = "income"
+
 @Serializable
-@Entity(tableName = "budget_item", indices = [Index(value = ["name"], unique = true)])
-data class Item(
+@Entity(tableName = "transactions")
+data class BudgetTransaction(
     @PrimaryKey(autoGenerate = true)
-    val itemId: Long = 0,
-    val name:String,
-    val date: String,
+    val transactionId: Long = 0,
+    val title: String? = null,
+    val amount: Double,
     val category: String,
-    val picturePath: String? = null
+    val type: String,
+    val transactionDate: String,
+    val picturePath: String? = null,
 )
 
 @Serializable
-@Entity(
-    tableName = "purchase_details",
-    foreignKeys = [ForeignKey(
-        entity = Item::class,
-        parentColumns = ["itemId"],
-        childColumns = ["itemId"],
-        onDelete = ForeignKey.CASCADE
-    )]
-)
-data class PurchaseDetails(
-    @PrimaryKey(autoGenerate = true)
-    val purchaseId: Long = 0,
-    @ColumnInfo(index = true)
-    val itemId:Long,
-    val cost: Double,
-    val purchaseDate: String,
-    val month: Int,
-    val year: Int,
+data class RecentEntryTemplate(
+    val title: String? = null,
+    val category: String,
+    val amount: Double,
+    val type: String,
 )
 
-@Serializable
-data class ItemWithPurchaseDetails(
-    @Embedded val item: Item,
-    val totalCost: Double,
-)
+fun BudgetTransaction.displayTitle(): String {
+    return title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
+}
 
+fun defaultTransactionTitle(category: String, type: String): String = when {
+    type == TRANSACTION_TYPE_INCOME -> "Income"
+    category == "food" -> "Food"
+    category == "transportation" -> "Transit"
+    category == "others" -> "Other expense"
+    else -> "Expense"
+}

@@ -2,80 +2,68 @@ package com.example.mybudgetapp.database
 
 import kotlinx.coroutines.flow.Flow
 
-class OfflineRepository (
-    private val itemDao: ItemDao,
-    private val purchaseDetailsDao: PurchaseDetailsDao,
-    private val itemWithPurchaseDetailsDao: ItemWithPurchaseDetailsDao
-): ItemRepository {
+class OfflineRepository(
+    private val transactionDao: TransactionDao,
+) : ItemRepository {
 
+    override suspend fun insertTransaction(transaction: BudgetTransaction): Long =
+        transactionDao.insertTransaction(transaction)
 
-    override suspend fun insertItem(item: Item) = itemDao.insertItem(item)
-    override suspend fun deleteItem(item: Item) = itemDao.deleteItem(item)
-    override suspend fun updateItem(item: Item) = itemDao.updateItem(item)
+    override suspend fun insertTransactions(transactions: List<BudgetTransaction>) =
+        transactionDao.insertTransactions(transactions)
 
-    override suspend fun updateItemDateWithId(date: String, id: Long) = itemDao.updateItemDateWithId(date, id)
+    override suspend fun updateTransaction(transaction: BudgetTransaction) =
+        transactionDao.updateTransaction(transaction)
 
-    override fun getItemFromId(id: Long): Flow<Item>
-    = itemDao.getItemFromId(id)
-    override suspend fun deleteItemWithId(id: Long)  =
-        itemDao.deleteItemWithId(id)
+    override suspend fun deleteTransaction(transaction: BudgetTransaction) =
+        transactionDao.deleteTransaction(transaction)
 
-    override suspend fun updateItemImagePathWithId(imagePath: String, id: Long) = itemDao.updateItemImagePathWithId(
-        imagePath = imagePath, id = id
-    )
+    override suspend fun deleteTransactionWithId(id: Long) =
+        transactionDao.deleteTransactionWithId(id)
 
-    override suspend fun getItemIdFromName(name: String): Long? = itemDao.getIdFromName(name)
+    override fun getTransaction(id: Long): Flow<BudgetTransaction> =
+        transactionDao.getTransaction(id)
 
+    override fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>> =
+        transactionDao.getRecentEntryTemplates(limit)
 
-    override suspend fun insetPurchaseDetails(purchaseDetails: PurchaseDetails)
-    = purchaseDetailsDao.insertItem(purchaseDetails)
+    override fun getAllMonths(year: Int): Flow<List<Int>> = transactionDao.getAllMonths(year)
 
+    override fun getAllYears(): Flow<List<Int>> = transactionDao.getAllYears()
 
-    override suspend fun updatePurchaseDetails(purchaseDetails: PurchaseDetails)
-        = purchaseDetailsDao.updateItem(purchaseDetails)
+    override fun getTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByType(month, year, TRANSACTION_TYPE_EXPENSE)
 
-    override suspend fun deletePurchaseDetails(purchaseDetails: PurchaseDetails)
-        = purchaseDetailsDao.deleteItem(purchaseDetails)
+    override fun getTransactionsForYear(year: Int): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByTypeForYear(year, TRANSACTION_TYPE_EXPENSE)
 
-    override fun getAllMonths(year: Int) = purchaseDetailsDao.getAllMonths(year)
-    override fun getAllYears(): Flow<List<Int>> = purchaseDetailsDao.getAllYears()
+    override fun getTransactionsByCategory(month: Int, year: Int, category: String): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByCategory(month, year, category)
 
-    override fun getItemWithPurchaseDetails(month: Int, year: Int): Flow<List<ItemWithPurchaseDetails>>
-     = itemWithPurchaseDetailsDao.getAllItemsWithPurchaseDetails(month = month, year = year)
+    override fun getTransactionsByCategoryForYear(year: Int, category: String): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByCategoryForYear(year, category)
 
-    override fun getItemWithPurchaseDetailsForYear(year: Int): Flow<List<ItemWithPurchaseDetails>>
-    = itemWithPurchaseDetailsDao.getAllItemsWithPurchaseDetailsForYear(year)
+    override fun getIncomeTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByType(month, year, TRANSACTION_TYPE_INCOME)
 
-    override fun getItemWithPurchaseDetailsForCategoryForYear(
-        year: Int,
-        category: String
-    ): Flow<List<ItemWithPurchaseDetails>> =
-        itemWithPurchaseDetailsDao.getAllItemsWithPurchaseDetailsForCategoryForYear(year, category)
+    override fun getIncomeTransactionsForYear(year: Int): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByTypeForYear(year, TRANSACTION_TYPE_INCOME)
 
-    override fun getItemWithPurchaseDetailsForCategory(month: Int, year: Int, category: String)
-    = itemWithPurchaseDetailsDao.getAllItemsWithPurchaseDetailsForCategory(month, year, category)
+    override fun getTotalSpendingOnCategory(category: String, year: Int, month: Int): Flow<Double> =
+        transactionDao.getTotalSpendingOnCategory(category, year, month)
 
-    override fun getTotalSpendingOnCategory(category: String, year: Int, month: Int): Flow<Double>
-    = itemWithPurchaseDetailsDao.getTotalSpendingOnCategory(category = category, month = month, year = year)
-
-    override fun getTotalSpendingOverall(year: Int, month: Int): Flow<Double>
-    = itemWithPurchaseDetailsDao.getTotalSpendingOverall(year = year, month = month)
+    override fun getTotalSpendingOverall(year: Int, month: Int): Flow<Double> =
+        transactionDao.getTotalSpendingOverall(year, month)
 
     override fun getTotalIncomeOverall(year: Int, month: Int): Flow<Double> =
-        itemWithPurchaseDetailsDao.getTotalIncomeOverall(year, month = month)
-
-    override fun getTotalIncomeOverallForYear(year: Int): Flow<Double> =
-        itemWithPurchaseDetailsDao.getTotalIncomeOverallForYear(year)
+        transactionDao.getTotalIncomeOverall(year, month)
 
     override fun getTotalSpendingOnCategoryForYear(category: String, year: Int): Flow<Double> =
-        itemWithPurchaseDetailsDao.getTotalSpendingOnCategoryForYear(category, year)
+        transactionDao.getTotalSpendingOnCategoryForYear(category, year)
 
     override fun getTotalSpendingOverallForYear(year: Int): Flow<Double> =
-        itemWithPurchaseDetailsDao.getTotalSpendingOverallForYear(year)
-    override fun getItemDates(id: Long): Flow<List<PurchaseDetails>> =
-        itemWithPurchaseDetailsDao.getALlDatesForAnItem(id)
-    override fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>> =
-        purchaseDetailsDao.getRecentEntryTemplates(limit)
+        transactionDao.getTotalSpendingOverallForYear(year)
 
-
+    override fun getTotalIncomeOverallForYear(year: Int): Flow<Double> =
+        transactionDao.getTotalIncomeOverallForYear(year)
 }

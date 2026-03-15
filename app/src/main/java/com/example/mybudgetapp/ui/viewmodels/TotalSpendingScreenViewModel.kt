@@ -4,8 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
-import com.example.mybudgetapp.database.ItemWithPurchaseDetails
+import com.example.mybudgetapp.database.displayTitle
 import com.example.mybudgetapp.ui.screens.TotalIncomeDestination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,7 +19,7 @@ import java.time.LocalDate
 class TotalSpendingScreenViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
-): ViewModel(){
+) : ViewModel() {
 
     val date: LocalDate = LocalDate.now()
     private val currentMonth: String = checkNotNull(savedStateHandle[TotalIncomeDestination.month])
@@ -32,47 +33,41 @@ class TotalSpendingScreenViewModel(
     }
 
     val uiState: StateFlow<TotalSpendingUiState> = combine(
-        itemRepository.getItemWithPurchaseDetails(month = currentMonthValue!!, year = date.year),
+        itemRepository.getTransactions(month = currentMonthValue!!, year = date.year),
         itemRepository.getTotalSpendingOverall(year = date.year, month = currentMonthValue),
         itemRepository.getTotalIncomeOverall(year = date.year, month = currentMonthValue),
-        itemRepository.getItemWithPurchaseDetailsForCategory(category = "income", year = date.year, month = currentMonthValue)
-        ){   spendingItems, totalSpending, totalIncome, incomeItems  ->
-            TotalSpendingUiState(
-                totalSpending = formatCurrencyIraqiDinar(totalSpending),
-                spendingItemList = spendingItems.map {it.toSpendingItem()},
-                month = currentMonth,
-                isIncome = isIncome,
-                totalIncome = formatCurrencyIraqiDinar(totalIncome),
-                incomeItemList = incomeItems.map { it.toSpendingItem() },
-                isThisMonthCurrent = isThisMonthCurrent,
-                isDeleteDialogVisible = isDeleteDialogVisible.value
-            )
-
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
-            initialValue = TotalSpendingUiState()
+        itemRepository.getIncomeTransactions(year = date.year, month = currentMonthValue)
+    ) { spendingItems, totalSpending, totalIncome, incomeItems ->
+        TotalSpendingUiState(
+            totalSpending = formatCurrencyIraqiDinar(totalSpending),
+            spendingItemList = spendingItems.map { it.toSpendingItem() },
+            month = currentMonth,
+            isIncome = isIncome,
+            totalIncome = formatCurrencyIraqiDinar(totalIncome),
+            incomeItemList = incomeItems.map { it.toSpendingItem() },
+            isThisMonthCurrent = isThisMonthCurrent,
+            isDeleteDialogVisible = isDeleteDialogVisible.value
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+        initialValue = TotalSpendingUiState()
+    )
 
     fun deleteItem(itemId: Long) {
         viewModelScope.launch {
-            itemRepository.deleteItemWithId(itemId)
+            itemRepository.deleteTransactionWithId(itemId)
         }
     }
 
     fun displayConfirmDelete(isIt: Boolean) {
         isDeleteDialogVisible.value = isIt
-
     }
-
-
 
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }
-
 }
-
 
 data class TotalSpendingUiState(
     val isDeleteDialogVisible: Boolean = false,
@@ -90,15 +85,16 @@ data class SpendingItem(
     val name: String = "",
     val date: String = "",
     val totalCost: String = "",
-    val category:String = "",
+    val category: String = "",
     val itemId: Long = 0
 )
-fun ItemWithPurchaseDetails.toSpendingItem(): SpendingItem =
+
+fun BudgetTransaction.toSpendingItem(): SpendingItem =
     SpendingItem(
-        imagePath = item.picturePath,
-        name = item.name,
-        date = item.date,
-        totalCost = formatCurrencyIraqiDinar(totalCost),
-        category = item.category,
-        itemId = item.itemId
+        imagePath = picturePath,
+        name = displayTitle(),
+        date = transactionDate,
+        totalCost = formatCurrencyIraqiDinar(amount),
+        category = category,
+        itemId = transactionId
     )
