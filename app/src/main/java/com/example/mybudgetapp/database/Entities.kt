@@ -28,6 +28,11 @@ data class RecentEntryTemplate(
     val type: String,
 )
 
+data class MonthPeriod(
+    val year: Int,
+    val month: Int,
+)
+
 fun BudgetTransaction.displayTitle(): String {
     return title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
 }

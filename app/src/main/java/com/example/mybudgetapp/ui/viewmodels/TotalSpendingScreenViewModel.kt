@@ -3,6 +3,7 @@ package com.example.mybudgetapp.ui.viewmodels
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
@@ -15,37 +16,33 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.Month
 
 class TotalSpendingScreenViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val date: LocalDate = LocalDate.now()
-    private val currentMonth: String = checkNotNull(savedStateHandle[TotalIncomeDestination.month])
-    private val isIncome: Boolean = checkNotNull(savedStateHandle[TotalIncomeDestination.isIncome.toString()])
-    private val currentMonthValue = getMonthNumber(currentMonth)
-    private var isThisMonthCurrent = true
-    private var isDeleteDialogVisible = MutableStateFlow(false)
-
-    init {
-        isThisMonthCurrent = (date.monthValue == currentMonthValue)
-    }
+    private val currentMonthValue: Int = checkNotNull(savedStateHandle[TotalIncomeDestination.month])
+    private val currentYear: Int = checkNotNull(savedStateHandle[TotalIncomeDestination.year])
+    private val isIncome: Boolean = checkNotNull(savedStateHandle[TotalIncomeDestination.isIncome])
+    private val date: LocalDate = LocalDate.now()
+    private val isDeleteDialogVisible = MutableStateFlow(false)
 
     val uiState: StateFlow<TotalSpendingUiState> = combine(
-        itemRepository.getTransactions(month = currentMonthValue!!, year = date.year),
-        itemRepository.getTotalSpendingOverall(year = date.year, month = currentMonthValue),
-        itemRepository.getTotalIncomeOverall(year = date.year, month = currentMonthValue),
-        itemRepository.getIncomeTransactions(year = date.year, month = currentMonthValue)
+        itemRepository.getTransactions(month = currentMonthValue, year = currentYear),
+        itemRepository.getTotalSpendingOverall(year = currentYear, month = currentMonthValue),
+        itemRepository.getTotalIncomeOverall(year = currentYear, month = currentMonthValue),
+        itemRepository.getIncomeTransactions(year = currentYear, month = currentMonthValue)
     ) { spendingItems, totalSpending, totalIncome, incomeItems ->
         TotalSpendingUiState(
             totalSpending = formatCurrencyIraqiDinar(totalSpending),
             spendingItemList = spendingItems.map { it.toSpendingItem() },
-            month = currentMonth,
+            month = "${Month.of(currentMonthValue).toString().capitalized()} $currentYear",
             isIncome = isIncome,
             totalIncome = formatCurrencyIraqiDinar(totalIncome),
             incomeItemList = incomeItems.map { it.toSpendingItem() },
-            isThisMonthCurrent = isThisMonthCurrent,
+            isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
             isDeleteDialogVisible = isDeleteDialogVisible.value
         )
     }.stateIn(

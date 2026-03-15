@@ -1,24 +1,28 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,12 +33,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,19 +43,16 @@ import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.dmSans
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
-import com.example.mybudgetapp.ui.viewmodels.ScreenItemsUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisYearScreenUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisYearScreenViewModel
 import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.CategoryCard
-import com.example.mybudgetapp.ui.widgets.DropDownMenu
+import com.example.mybudgetapp.ui.widgets.DropDownItem
 import com.example.mybudgetapp.ui.widgets.TotalIncomeSpending
-import java.time.LocalDate
 
-object ThisYearDestination: NavigationDestination {
+object ThisYearDestination : NavigationDestination {
     override val route = "ThisYearScreen"
     override val titleRes = R.string.this_month_screen
-
 }
 
 @Composable
@@ -63,18 +60,19 @@ fun ThisYearScreen(
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToCloudBackup: () -> Unit,
-    navigateToThisMonthScreen: () -> Unit ,
+    navigateToThisMonthScreen: () -> Unit,
     navigateToThisYearScreen: () -> Unit
-){
+) {
     val viewModel: ThisYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     var isQuickAddVisible by rememberSaveable { mutableStateOf(false) }
+    var isYearPickerVisible by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    Scaffold (
+    Scaffold(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    if (uiState.value.selectedYear == LocalDate.now().year) {
+                    if (uiState.value.isCurrentYear) {
                         isQuickAddVisible = true
                     } else {
                         Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
@@ -99,13 +97,13 @@ fun ThisYearScreen(
                 selectedItemIndex = 0
             )
         }
-    ) {innerPadding ->
-
+    ) { innerPadding ->
         ThisYearScreenBody(
             modifier = Modifier.padding(innerPadding),
             uiState = uiState.value,
-            updateExpandState = viewModel::updateVisibility,
-            updateYear = {viewModel.updateSelectedMonth(it)},
+            onPreviousYear = viewModel::selectPreviousYear,
+            onNextYear = viewModel::selectNextYear,
+            onOpenYearPicker = { isYearPickerVisible = true },
             navigateToSpendingOnCategoryForYear = navigateToSpendingOnCategoryForYear,
             navigateToTotalIncomeForYear = navigateToTotalIncomeForYear
         )
@@ -117,95 +115,49 @@ fun ThisYearScreen(
             )
         }
 
+        if (isYearPickerVisible) {
+            YearPickerBottomSheet(
+                years = uiState.value.years,
+                onDismissRequest = { isYearPickerVisible = false },
+                onSelectYear = {
+                    viewModel.selectYear(it.number)
+                    isYearPickerVisible = false
+                },
+                onJumpToCurrent = {
+                    viewModel.jumpToCurrentYear()
+                    isYearPickerVisible = false
+                }
+            )
+        }
     }
 }
 
 @Composable
 fun ThisYearScreenBody(
     modifier: Modifier = Modifier,
-    updateExpandState: (ScreenItemsUiState) -> Unit,
     uiState: ThisYearScreenUiState,
+    onPreviousYear: () -> Unit,
+    onNextYear: () -> Unit,
+    onOpenYearPicker: () -> Unit,
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
-    updateYear: (Int) -> Unit,
-){
-    val density = LocalDensity.current
-
-    Column (
+) {
+    Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
             .fillMaxSize()
             .then(modifier)
-    ){
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .padding(vertical = 32.dp)
-                .fillMaxWidth()
-                .onSizeChanged {
-                    updateExpandState(
-                        uiState.screenItemsUiState.value.copy(
-                            itemHeight = with(density) { it.height.toDp() }
-                        )
-                    )
+    ) {
+        YearHeader(
+            label = uiState.currentYear,
+            canNavigatePrevious = uiState.canNavigatePrevious,
+            canNavigateNext = uiState.canNavigateNext,
+            onPrevious = onPreviousYear,
+            onNext = onNextYear,
+            onOpenPicker = onOpenYearPicker,
+        )
 
-                }
-        ) {
-            Text(
-                text = uiState.currentYear,
-                fontFamily = dmSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 40.sp
-            )
-            IconButton(
-                onClick = {
-                    updateExpandState(
-                        uiState.screenItemsUiState.value.copy(
-                            isDropDownMenuVisible = !uiState.screenItemsUiState.value.isDropDownMenuVisible
-                        ),
-                    )
-                },
-                modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .pointerInput(true) {
-                        detectTapGestures(
-                            onPress = {
-                                updateExpandState(
-                                    uiState.screenItemsUiState.value.copy(
-                                        offSet = DpOffset(it.x.toDp(), it.y.toDp())
-                                    )
-                                )
-                            }
-                        )
-                    }
-            ) {
-                Icon(
-                    imageVector = if (uiState.screenItemsUiState.value.isDropDownMenuVisible) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown ,
-                    contentDescription = null,
-                    modifier = Modifier.size(36.dp)
-                )
-                DropDownMenu(
-                    dropDownItem = uiState.years ,
-                    onDismissRequest = updateExpandState,
-                    isContextMenuVisible = uiState.screenItemsUiState.value.isDropDownMenuVisible,
-                    uiState = uiState.screenItemsUiState.value,
-                    onSelected = { index ->
-                        updateExpandState(
-                            uiState.screenItemsUiState.value.copy(
-                                isDropDownMenuVisible = !uiState.screenItemsUiState.value.isDropDownMenuVisible
-                            )
-                        )
-                        updateYear(uiState.years[index].number)
-
-                    }
-                )
-
-            }
-
-
-        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -219,12 +171,8 @@ fun ThisYearScreenBody(
                 total = uiState.totalIncomeForYear,
                 modifier = Modifier.weight(1f),
                 navigateToTotalIncome = {
-                    navigateToTotalIncomeForYear(
-                        uiState.currentYear.toInt(),
-                        true
-                    )
+                    navigateToTotalIncomeForYear(uiState.selectedYear, true)
                 }
-
             )
             Spacer(modifier = Modifier.width(16.dp))
             TotalIncomeSpending(
@@ -233,16 +181,12 @@ fun ThisYearScreenBody(
                 total = uiState.totalSpendingForYear,
                 modifier = Modifier.weight(1f),
                 navigateToTotalIncome = {
-                    navigateToTotalIncomeForYear(
-                        uiState.currentYear.toInt(),
-                        false
-                    )
+                    navigateToTotalIncomeForYear(uiState.selectedYear, false)
                 }
-
             )
         }
 
-        Column (
+        Column(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -268,34 +212,96 @@ fun ThisYearScreenBody(
                 item = SpendingCategoryDisplayObject.items[0],
                 totalSpending = uiState.totalSpendingOnFoodForYear,
                 modifier = Modifier.padding(bottom = 16.dp),
-                navigateToSpendingOnCategory = {navigateToSpendingOnCategoryForYear(
-                    "food",
-                    uiState.currentYear.toInt()
-                )}
+                navigateToSpendingOnCategory = { navigateToSpendingOnCategoryForYear("food", uiState.selectedYear) }
             )
             CategoryCard(
                 item = SpendingCategoryDisplayObject.items[1],
                 totalSpending = uiState.totalSpendingOnTransportationForYear,
                 modifier = Modifier.padding(bottom = 16.dp),
-                navigateToSpendingOnCategory = {
-                    navigateToSpendingOnCategoryForYear(
-                        "transportation",
-                        uiState.currentYear.toInt()
-                    )
-                }
+                navigateToSpendingOnCategory = { navigateToSpendingOnCategoryForYear("transportation", uiState.selectedYear) }
             )
             CategoryCard(
                 item = SpendingCategoryDisplayObject.items[2],
                 totalSpending = uiState.totalSpendingOnOthersForYear,
                 modifier = Modifier.padding(bottom = 16.dp),
-                navigateToSpendingOnCategory = {
-                    navigateToSpendingOnCategoryForYear(
-                        "others",
-                        uiState.currentYear.toInt()
-                    )
-                }
+                navigateToSpendingOnCategory = { navigateToSpendingOnCategoryForYear("others", uiState.selectedYear) }
             )
         }
     }
+}
 
+@Composable
+private fun YearHeader(
+    label: String,
+    canNavigatePrevious: Boolean,
+    canNavigateNext: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onOpenPicker: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 24.dp)
+            .fillMaxWidth()
+    ) {
+        IconButton(onClick = onPrevious, enabled = canNavigatePrevious) {
+            Icon(imageVector = Icons.Filled.KeyboardArrowLeft, contentDescription = null)
+        }
+        Text(
+            text = label,
+            fontFamily = dmSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp,
+            modifier = Modifier.clickable(onClick = onOpenPicker)
+        )
+        IconButton(onClick = onNext, enabled = canNavigateNext) {
+            Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = null)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun YearPickerBottomSheet(
+    years: List<DropDownItem>,
+    onDismissRequest: () -> Unit,
+    onSelectYear: (DropDownItem) -> Unit,
+    onJumpToCurrent: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismissRequest) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            item {
+                Text(
+                    text = "Jump to year",
+                    fontFamily = dmSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                )
+            }
+            item {
+                Text(
+                    text = "This year",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onJumpToCurrent)
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                )
+            }
+            items(years) { year ->
+                Text(
+                    text = year.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectYear(year) }
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                )
+            }
+        }
+    }
 }

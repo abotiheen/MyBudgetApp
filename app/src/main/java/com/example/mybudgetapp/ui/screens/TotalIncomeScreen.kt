@@ -43,9 +43,10 @@ import com.example.mybudgetapp.ui.widgets.TotalIncomeCard
 object TotalIncomeDestination: NavigationDestination {
     override val route = "TotalIncome"
     override val titleRes = R.string.total_income_screen
-    const val month = "this"
-    const val isIncome: Boolean = true
-    val routeWithArgs = "$route/{$month}/{$isIncome}"
+    const val month = "month"
+    const val year = "year"
+    const val isIncome = "isIncome"
+    val routeWithArgs = "$route/{$month}/{$year}/{$isIncome}"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -168,4 +169,3 @@ fun TotalIncomeBody(
         }
     }
 }
-

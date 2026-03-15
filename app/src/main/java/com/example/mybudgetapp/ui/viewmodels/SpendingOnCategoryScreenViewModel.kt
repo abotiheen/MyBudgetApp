@@ -18,35 +18,28 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.Month
-import java.util.Locale
 
 class SpendingOnCategoryScreenViewModel(
     private val itemRepository: ItemRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val date: LocalDate = LocalDate.now()
-    private val currentMonth: String = checkNotNull(savedStateHandle[SpendingOnCategoryDestination.month])
+    private val currentMonthValue: Int = checkNotNull(savedStateHandle[SpendingOnCategoryDestination.month])
+    private val currentYear: Int = checkNotNull(savedStateHandle[SpendingOnCategoryDestination.year])
     private val category: String = checkNotNull(savedStateHandle[SpendingOnCategoryDestination.category])
-    private val currentMonthValue = getMonthNumber(currentMonth)
-    private var isThisMonthCurrent: Boolean = true
+    private val date: LocalDate = LocalDate.now()
     private var isDeleteDialogVisible = MutableStateFlow(false)
 
-    init {
-        isThisMonthCurrent = (date.monthValue == currentMonthValue)
-    }
-
     var uiState: StateFlow<SpendingOnCategoryUiState> = combine(
-        itemRepository.getTransactionsByCategory(month = currentMonthValue!!, year = date.year, category = category),
+        itemRepository.getTransactionsByCategory(month = currentMonthValue, year = currentYear, category = category),
         itemRepository.getTotalSpendingOnCategory(
             month = currentMonthValue,
-            year = date.year,
+            year = currentYear,
             category = category
         ),
         itemRepository.getTotalSpendingOverall(
             month = currentMonthValue,
-            year = date.year,
+            year = currentYear,
         )
     ) { itemList, totalCategory, totalSpending ->
         SpendingOnCategoryUiState(
@@ -54,7 +47,7 @@ class SpendingOnCategoryScreenViewModel(
             totalCategory = formatCurrencyIraqiDinar(totalCategory),
             spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
             itemList = itemList.map { it.toSpendingOnCategoryItem() },
-            isThisMonthCurrent = isThisMonthCurrent,
+            isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
             category = category.capitalized(),
             sentCategory = category,
             isDeleteDialogVisible = isDeleteDialogVisible.value
@@ -108,12 +101,3 @@ fun BudgetTransaction.toSpendingOnCategoryItem(): SpendingOnCategoryItem =
         date = transactionDate,
         totalCost = formatCurrencyIraqiDinar(amount)
     )
-
-fun getMonthNumber(monthName: String): Int? {
-    return try {
-        val month = Month.valueOf(monthName.uppercase(Locale.ROOT))
-        month.value
-    } catch (e: IllegalArgumentException) {
-        null
-    }
-}

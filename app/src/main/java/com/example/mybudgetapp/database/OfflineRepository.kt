@@ -29,6 +29,9 @@ class OfflineRepository(
 
     override fun getAllMonths(year: Int): Flow<List<Int>> = transactionDao.getAllMonths(year)
 
+    override fun getAvailableMonthPeriods(): Flow<List<MonthPeriod>> =
+        transactionDao.getAvailableMonthPeriods()
+
     override fun getAllYears(): Flow<List<Int>> = transactionDao.getAllYears()
 
     override fun getTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>> =

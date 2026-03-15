@@ -38,15 +38,14 @@ fun AppNavHost (
     ) {
         composable(ThisMonthDestination.route) {
             ThisMonthScreen(
-                navigateToSpendingOnCategory = { category, month ->
+                navigateToSpendingOnCategory = { category, month, year ->
                     navController.navigate(
-
-                        "${SpendingOnCategoryDestination.route}/$category/$month"
+                        "${SpendingOnCategoryDestination.route}/$category/$month/$year"
                     )
                                                },
-                navigateToTotalIncome = { month, isIncome ->
+                navigateToTotalIncome = { month, year, isIncome ->
                     navController.navigate(
-                        "${TotalIncomeDestination.route}/$month/$isIncome"
+                        "${TotalIncomeDestination.route}/$month/$year/$isIncome"
                     )
                 },
                 navigateToCloudBackup = {
@@ -135,7 +134,10 @@ fun AppNavHost (
                     type = NavType.StringType
                 },
                 navArgument(SpendingOnCategoryDestination.month) {
-                    type = NavType.StringType
+                    type = NavType.IntType
+                },
+                navArgument(SpendingOnCategoryDestination.year) {
+                    type = NavType.IntType
                 }
             )
         ) {
@@ -157,9 +159,12 @@ fun AppNavHost (
             route = TotalIncomeDestination.routeWithArgs,
             arguments = listOf(
                 navArgument((TotalIncomeDestination.month)){
-                    type = NavType.StringType
+                    type = NavType.IntType
                 },
-                navArgument((TotalIncomeDestination.isIncome.toString())){
+                navArgument(TotalIncomeDestination.year) {
+                    type = NavType.IntType
+                },
+                navArgument(TotalIncomeDestination.isIncome){
                     type = NavType.BoolType
                 }
             )

@@ -1,25 +1,28 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,12 +33,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,39 +43,37 @@ import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.dmSans
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
-import com.example.mybudgetapp.ui.viewmodels.ScreenItemsUiState
+import com.example.mybudgetapp.ui.viewmodels.MonthPeriodOption
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenViewModel
 import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.CategoryCard
-import com.example.mybudgetapp.ui.widgets.DropDownMenu
 import com.example.mybudgetapp.ui.widgets.TotalIncomeSpending
-import java.time.LocalDate
 
-object ThisMonthDestination: NavigationDestination {
+object ThisMonthDestination : NavigationDestination {
     override val route = "ThisMonthScreen"
     override val titleRes = R.string.this_month_screen
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThisMonthScreen(
-    navigateToSpendingOnCategory: (String, String) -> Unit,
-    navigateToTotalIncome: (String, Boolean) -> Unit,
+    navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
+    navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToCloudBackup: () -> Unit,
     navigateToThisMonthScreen: () -> Unit,
     navigateToThisYearScreen: () -> Unit
-){
+) {
     val viewModel: ThisMonthScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     var isQuickAddVisible by rememberSaveable { mutableStateOf(false) }
+    var isPeriodPickerVisible by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    Scaffold (
+    Scaffold(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    if (uiState.value.selectedMonth == LocalDate.now().monthValue) {
+                    if (uiState.value.isCurrentPeriod) {
                         isQuickAddVisible = true
                     } else {
                         Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
@@ -101,16 +98,15 @@ fun ThisMonthScreen(
                 selectedItemIndex = 1
             )
         }
-
-    ) {innerPadding ->
-
+    ) { innerPadding ->
         ThisMonthScreenBody(
             modifier = Modifier.padding(innerPadding),
             uiState = uiState.value,
-            updateExpandState = viewModel::updateVisibility,
-            updateMonth = {viewModel.updateSelectedMonth(it)},
+            onPreviousPeriod = viewModel::selectPreviousPeriod,
+            onNextPeriod = viewModel::selectNextPeriod,
+            onOpenPeriodPicker = { isPeriodPickerVisible = true },
             navigateToSpendingOnCategory = navigateToSpendingOnCategory,
-            navigateToTotalIncome = navigateToTotalIncome
+            navigateToTotalIncome = navigateToTotalIncome,
         )
 
         if (isQuickAddVisible) {
@@ -120,102 +116,49 @@ fun ThisMonthScreen(
             )
         }
 
+        if (isPeriodPickerVisible) {
+            MonthPeriodPickerBottomSheet(
+                periods = uiState.value.availablePeriods,
+                onDismissRequest = { isPeriodPickerVisible = false },
+                onSelectPeriod = {
+                    viewModel.selectPeriod(it)
+                    isPeriodPickerVisible = false
+                },
+                onJumpToCurrent = {
+                    viewModel.jumpToCurrentPeriod()
+                    isPeriodPickerVisible = false
+                }
+            )
+        }
     }
 }
 
 @Composable
 fun ThisMonthScreenBody(
     modifier: Modifier = Modifier,
-    updateExpandState: (ScreenItemsUiState) -> Unit,
     uiState: ThisMonthScreenUiState,
-    navigateToSpendingOnCategory: (String, String) -> Unit,
-    navigateToTotalIncome: (String, Boolean) -> Unit,
-    updateMonth: (Int) -> Unit,
-){
-    val density = LocalDensity.current
-
-    Column (
+    onPreviousPeriod: () -> Unit,
+    onNextPeriod: () -> Unit,
+    onOpenPeriodPicker: () -> Unit,
+    navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
+    navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
+) {
+    Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
             .fillMaxSize()
             .then(modifier)
-    ){
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .padding(vertical = 32.dp)
-                .fillMaxWidth()
-                .onSizeChanged {
-                    updateExpandState(
-                        uiState.screenItemsUiState.value.copy(
-                            itemHeight = with(density) { it.height.toDp() }
-                        )
-                    )
+    ) {
+        MonthPeriodHeader(
+            label = uiState.periodLabel,
+            canNavigatePrevious = uiState.canNavigatePrevious,
+            canNavigateNext = uiState.canNavigateNext,
+            onPrevious = onPreviousPeriod,
+            onNext = onNextPeriod,
+            onOpenPicker = onOpenPeriodPicker,
+        )
 
-                }
-        ) {
-
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ){
-                Text(
-                    text = uiState.currentMonth,
-                    fontFamily = dmSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 40.sp
-                )
-                IconButton(
-                    onClick = {
-                        updateExpandState(
-                            uiState.screenItemsUiState.value.copy(
-                                isDropDownMenuVisible = !uiState.screenItemsUiState.value.isDropDownMenuVisible
-                            ),
-                        )
-                    },
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .pointerInput(true) {
-                            detectTapGestures(
-                                onPress = {
-                                    updateExpandState(
-                                        uiState.screenItemsUiState.value.copy(
-                                            offSet = DpOffset(it.x.toDp(), it.y.toDp())
-                                        )
-                                    )
-                                }
-                            )
-                        }
-                ) {
-                    Icon(
-                        imageVector = if (uiState.screenItemsUiState.value.isDropDownMenuVisible) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown ,
-                        contentDescription = null,
-                        modifier = Modifier.size(36.dp)
-                    )
-                    DropDownMenu(
-                        dropDownItem = uiState.months ,
-                        onDismissRequest = updateExpandState,
-                        isContextMenuVisible = uiState.screenItemsUiState.value.isDropDownMenuVisible,
-                        uiState = uiState.screenItemsUiState.value,
-                        onSelected = { index ->
-                            updateExpandState(
-                                uiState.screenItemsUiState.value.copy(
-                                    isDropDownMenuVisible = !uiState.screenItemsUiState.value.isDropDownMenuVisible
-                                )
-                            )
-                            updateMonth(index)
-
-                        }
-                    )
-
-                }
-            }
-
-
-        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -229,12 +172,8 @@ fun ThisMonthScreenBody(
                 total = uiState.totalIncome,
                 modifier = Modifier.weight(1f),
                 navigateToTotalIncome = {
-                    navigateToTotalIncome(
-                        uiState.currentMonth,
-                        true
-                    )
+                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, true)
                 }
-
             )
             Spacer(modifier = Modifier.width(16.dp))
             TotalIncomeSpending(
@@ -243,16 +182,12 @@ fun ThisMonthScreenBody(
                 total = uiState.totalSpending,
                 modifier = Modifier.weight(1f),
                 navigateToTotalIncome = {
-                    navigateToTotalIncome(
-                        uiState.currentMonth,
-                        false
-                    )
+                    navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
                 }
-
             )
         }
 
-        Column (
+        Column(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -278,20 +213,16 @@ fun ThisMonthScreenBody(
                 item = SpendingCategoryDisplayObject.items[0],
                 totalSpending = uiState.totalSpendingOnFood,
                 modifier = Modifier.padding(bottom = 16.dp),
-                navigateToSpendingOnCategory = {navigateToSpendingOnCategory(
-                    "food",
-                    uiState.currentMonth
-                )}
+                navigateToSpendingOnCategory = {
+                    navigateToSpendingOnCategory("food", uiState.selectedMonth, uiState.selectedYear)
+                }
             )
             CategoryCard(
                 item = SpendingCategoryDisplayObject.items[1],
                 totalSpending = uiState.totalSpendingOnTransportation,
                 modifier = Modifier.padding(bottom = 16.dp),
                 navigateToSpendingOnCategory = {
-                    navigateToSpendingOnCategory(
-                        "transportation",
-                        uiState.currentMonth
-                    )
+                    navigateToSpendingOnCategory("transportation", uiState.selectedMonth, uiState.selectedYear)
                 }
             )
             CategoryCard(
@@ -299,13 +230,85 @@ fun ThisMonthScreenBody(
                 totalSpending = uiState.totalSpendingOnOthers,
                 modifier = Modifier.padding(bottom = 16.dp),
                 navigateToSpendingOnCategory = {
-                    navigateToSpendingOnCategory(
-                        "others",
-                        uiState.currentMonth
-                    )
+                    navigateToSpendingOnCategory("others", uiState.selectedMonth, uiState.selectedYear)
                 }
             )
         }
     }
+}
 
+@Composable
+private fun MonthPeriodHeader(
+    label: String,
+    canNavigatePrevious: Boolean,
+    canNavigateNext: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onOpenPicker: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 24.dp)
+            .fillMaxWidth()
+    ) {
+        IconButton(onClick = onPrevious, enabled = canNavigatePrevious) {
+            Icon(imageVector = Icons.Filled.KeyboardArrowLeft, contentDescription = null)
+        }
+        Text(
+            text = label,
+            fontFamily = dmSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp,
+            modifier = Modifier.clickable(onClick = onOpenPicker)
+        )
+        IconButton(onClick = onNext, enabled = canNavigateNext) {
+            Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = null)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MonthPeriodPickerBottomSheet(
+    periods: List<MonthPeriodOption>,
+    onDismissRequest: () -> Unit,
+    onSelectPeriod: (MonthPeriodOption) -> Unit,
+    onJumpToCurrent: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismissRequest) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            item {
+                Text(
+                    text = "Jump to month",
+                    fontFamily = dmSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                )
+            }
+            item {
+                Text(
+                    text = "This month",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onJumpToCurrent)
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                )
+            }
+            items(periods) { period ->
+                Text(
+                    text = period.label,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectPeriod(period) }
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                )
+            }
+        }
+    }
 }

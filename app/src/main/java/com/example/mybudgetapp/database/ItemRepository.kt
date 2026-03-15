@@ -12,6 +12,7 @@ interface ItemRepository {
     fun getTransaction(id: Long): Flow<BudgetTransaction>
     fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>
     fun getAllMonths(year: Int): Flow<List<Int>>
+    fun getAvailableMonthPeriods(): Flow<List<MonthPeriod>>
     fun getAllYears(): Flow<List<Int>>
 
     fun getTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>>

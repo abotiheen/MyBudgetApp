@@ -45,8 +45,9 @@ object SpendingOnCategoryDestination: NavigationDestination {
     override val route = "SpendingOnCategory"
     override val titleRes = R.string.spending_on_category_screen
     const val category = "category"
-    const val month = "this"
-    val routeWithArgs = "$route/{$category}/{$month}"
+    const val month = "month"
+    const val year = "year"
+    val routeWithArgs = "$route/{$category}/{$month}/{$year}"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -180,4 +181,3 @@ fun SpendingOnCategoryBody(
 
     }
 }
-

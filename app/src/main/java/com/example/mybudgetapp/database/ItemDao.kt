@@ -53,6 +53,16 @@ interface TransactionDao {
 
     @Query(
         """
+        select distinct cast(strftime('%Y', transactionDate) as integer) as year,
+               cast(strftime('%m', transactionDate) as integer) as month
+        from transactions
+        order by year asc, month asc
+        """
+    )
+    fun getAvailableMonthPeriods(): Flow<List<MonthPeriod>>
+
+    @Query(
+        """
         select distinct cast(strftime('%Y', transactionDate) as integer)
         from transactions
         order by cast(strftime('%Y', transactionDate) as integer) asc
