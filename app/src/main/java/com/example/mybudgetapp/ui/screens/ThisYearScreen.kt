@@ -1,5 +1,6 @@
 package com.example.mybudgetapp.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,18 +12,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
@@ -41,6 +50,7 @@ import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.CategoryCard
 import com.example.mybudgetapp.ui.widgets.DropDownMenu
 import com.example.mybudgetapp.ui.widgets.TotalIncomeSpending
+import java.time.LocalDate
 
 object ThisYearDestination: NavigationDestination {
     override val route = "ThisYearScreen"
@@ -58,7 +68,29 @@ fun ThisYearScreen(
 ){
     val viewModel: ThisYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
+    var isQuickAddVisible by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
     Scaffold (
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    if (uiState.value.selectedYear == LocalDate.now().year) {
+                        isQuickAddVisible = true
+                    } else {
+                        Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.padding(20.dp),
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
+            }
+        },
         bottomBar = {
             BottomNavigationBar(
                 navigateToThisMonthScreen = navigateToThisMonthScreen,
@@ -77,6 +109,13 @@ fun ThisYearScreen(
             navigateToSpendingOnCategoryForYear = navigateToSpendingOnCategoryForYear,
             navigateToTotalIncomeForYear = navigateToTotalIncomeForYear
         )
+
+        if (isQuickAddVisible) {
+            QuickAddBottomSheet(
+                viewModelKey = "homeQuickAddYear",
+                onDismissRequest = { isQuickAddVisible = false }
+            )
+        }
 
     }
 }

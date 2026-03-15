@@ -1,7 +1,6 @@
 package com.example.mybudgetapp.ui.viewmodels
 
 import android.content.Context
-import android.database.sqlite.SQLiteConstraintException
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -10,58 +9,82 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.database.Item
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.PurchaseDetails
-import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
+import com.example.mybudgetapp.database.RecentEntryTemplate
+import com.example.mybudgetapp.ui.screens.AddingItemDestination
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
-
-class AddingItemScreenViewModel (
+class AddingItemScreenViewModel(
     private val itemRepository: ItemRepository,
-    private val savedStateHandle: SavedStateHandle
-): ViewModel() {
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
 
-    private val category: String = checkNotNull(savedStateHandle[SpendingOnCategoryDestination.category])
-
-    var uiState by mutableStateOf(
-
-        SpendingItemDetailsUiState(
-            previousCategory = category,
-            itemDetails = if(category != "all") ItemDetails(category = category) else ItemDetails()
-        )
-    )
-    private set
-    private var date: LocalDate? = null
+    private val previousCategory: String = savedStateHandle[AddingItemDestination.category] ?: "all"
     private var localIsUploadSuccessful = false
 
+    var uiState by mutableStateOf(
+        SpendingItemDetailsUiState(
+            previousCategory = previousCategory,
+            itemDetails = if (previousCategory != "all") {
+                ItemDetails(category = previousCategory)
+            } else {
+                ItemDetails()
+            }
+        )
+    )
+        private set
 
+    val recentTemplates: StateFlow<List<RecentTemplateUiModel>> = itemRepository
+        .getRecentEntryTemplates(6)
+        .map { templates ->
+            templates
+                .filter(::matchesCurrentEntryContext)
+                .distinctBy { it.name.lowercase(Locale.ROOT) to it.category }
+                .map { it.toUiModel() }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+            initialValue = emptyList(),
+        )
 
-    init {
-        date = LocalDate.now()
-    }
-
-
-    //updating the UiState
     fun updateUiState(itemDetails: ItemDetails) {
-        uiState =
-            SpendingItemDetailsUiState(
-                itemDetails = itemDetails,
-                isEntryValid = validateInput(itemDetails),
-                isUploadSuccessful = localIsUploadSuccessful,
-                previousCategory = category
-            )
+        val normalizedCost = itemDetails.cost.replace(regex = Regex("[ ,-]"), replacement = "")
+        uiState = SpendingItemDetailsUiState(
+            itemDetails = itemDetails.copy(cost = normalizedCost),
+            isEntryValid = validateInput(itemDetails.copy(cost = normalizedCost)),
+            isUploadSuccessful = localIsUploadSuccessful,
+            previousCategory = previousCategory,
+        )
     }
 
-    //when the user selects an image
+    fun applyTemplate(template: RecentTemplateUiModel) {
+        updateUiState(
+            uiState.itemDetails.copy(
+                name = template.name,
+                category = template.category,
+                cost = template.cost,
+            )
+        )
+    }
+
     fun onImageSelected(context: Context, uri: Uri?) {
-        val imagePath: String? = getImagePath(context, uri) { isSuccess ->
+        val imagePath = getImagePath(context, uri) { isSuccess ->
             localIsUploadSuccessful = isSuccess
         }
 
@@ -69,114 +92,149 @@ class AddingItemScreenViewModel (
         uiState = uiState.copy(isUploadSuccessful = localIsUploadSuccessful)
     }
 
+    suspend fun saveEntry(stayOnScreen: Boolean): SaveEntryResult {
+        val currentDate = LocalDate.now()
+        val normalizedName = uiState.itemDetails.name.trim()
+        val resolvedCategory = resolveCategory(uiState.itemDetails.category)
+        val resolvedName = normalizedName.ifBlank { generateQuickName(resolvedCategory) }
+        val detailsToSave = uiState.itemDetails.copy(
+            name = resolvedName,
+            category = resolvedCategory,
+        )
 
-    //saving the item to database
-   suspend fun onSaveButtonClicked(context: Context) {
+        if (!validateInput(detailsToSave)) {
+            return SaveEntryResult.Invalid
+        }
 
-            updateUiState(
-                uiState.itemDetails.copy(
-                    name = uiState.itemDetails.name.trim()
-                )
+        var itemId = itemRepository.getItemIdFromName(resolvedName)
+        if (itemId == null) {
+            itemId = itemRepository.insertItem(detailsToSave.toItem(currentDate.toString()))
+        } else {
+            itemRepository.updateItemDateWithId(currentDate.toString(), itemId)
+        }
+
+        detailsToSave.imagePath?.let { path ->
+            itemRepository.updateItemImagePathWithId(path, itemId)
+        }
+
+        itemRepository.insetPurchaseDetails(
+            detailsToSave.toPurchaseDetails(
+                date = currentDate.toString(),
+                year = currentDate.year,
+                itemId = itemId,
+                month = currentDate.monthValue,
             )
+        )
 
-              try {
+        if (stayOnScreen) {
+            resetForNextEntry(detailsToSave.category)
+            return SaveEntryResult.SavedAndReadyForNext
+        }
 
-                  itemRepository.insertItem(uiState.itemDetails.toItem(""))
-                  itemRepository.insertItem(uiState.itemDetails.toItem("random"))
-
-              } catch (e: SQLiteConstraintException) {
-                  val itemId = getElementId(uiState.itemDetails.name)
-
-                  if(uiState.itemDetails.imagePath != null) {
-                      itemRepository.updateItemImagePathWithId(
-                          id = itemId,
-                          imagePath = uiState.itemDetails.imagePath!!
-                      )
-                  }
-                  itemRepository.updateItemDateWithId(date.toString(), itemId)
-                  itemRepository.insetPurchaseDetails(uiState.itemDetails.toPurchaseDetails(
-                      date = date.toString(),
-                      year = date!!.year,
-                      itemId = itemId,
-                      month = date!!.monthValue
-                  ))
-              }
-
+        return SaveEntryResult.SavedAndClose
     }
 
-    private suspend fun getElementId(name: String): Long {
-
-        return itemRepository.getItemIdFromName(name)
+    fun resetEntry() {
+        localIsUploadSuccessful = false
+        uiState = SpendingItemDetailsUiState(
+            previousCategory = previousCategory,
+            itemDetails = if (previousCategory != "all") {
+                ItemDetails(category = previousCategory)
+            } else {
+                ItemDetails()
+            },
+            isEntryValid = false,
+            isUploadSuccessful = false,
+        )
     }
 
+    private fun resetForNextEntry(lastUsedCategory: String) {
+        localIsUploadSuccessful = false
+        uiState = SpendingItemDetailsUiState(
+            previousCategory = previousCategory,
+            itemDetails = ItemDetails(
+                category = when (previousCategory) {
+                    "all" -> lastUsedCategory
+                    else -> previousCategory
+                }
+            ),
+            isEntryValid = false,
+            isUploadSuccessful = false,
+        )
+    }
 
+    private fun resolveCategory(currentCategory: String): String {
+        return when {
+            previousCategory != "all" -> previousCategory
+            currentCategory.isBlank() -> recentTemplates.value.firstOrNull()?.category ?: "food"
+            else -> currentCategory
+        }
+    }
 
-    //extracting the image path
+    private fun generateQuickName(category: String): String {
+        val label = when (category) {
+            "food" -> "Food"
+            "transportation" -> "Transit"
+            "income" -> "Income"
+            else -> "Expense"
+        }
+        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT))
+        return "$label $timestamp"
+    }
+
+    private fun matchesCurrentEntryContext(template: RecentEntryTemplate): Boolean {
+        return when (previousCategory) {
+            "all" -> template.category != "income"
+            else -> template.category == previousCategory
+        }
+    }
+
     private fun getImagePath(context: Context, uri: Uri?, callback: (Boolean) -> Unit): String? {
-        if(uri == null) {
+        if (uri == null) {
             callback(false)
             return null
         }
-        try {
-            // Step 1: Obtain InputStream from URI
-            val inputStream = uri.let { context.contentResolver.openInputStream(it) }
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
             val bitmap = BitmapFactory.decodeStream(inputStream)
-            // Step 2: Create FileOutputStream in External Storage (App-specific directory)
             val externalStorageDirectory = context.getExternalFilesDir(null)
+            if (externalStorageDirectory == null) {
+                callback(false)
+                return null
+            }
             val appSpecificDirectory = File(externalStorageDirectory, "YourAppImages")
-            appSpecificDirectory.mkdirs() // Create the "YourAppImages" folder if it doesn't exist
+            appSpecificDirectory.mkdirs()
 
-
-            // Step 3: Generate a unique file name based on timestamp
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val fileName = "image_$timeStamp.jpg"
-
-            // Step 4: Create FileOutputStream for the new file
-            val fileOutputStream = FileOutputStream(File(externalStorageDirectory, fileName))
-
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fileOutputStream)
-
-            // Step 5: Copy Data from InputStream to FileOutputStream
-            inputStream?.use { input ->
-                fileOutputStream.use { output ->
-                    input.copyTo(output)
-                }
+            val imageFile = File(appSpecificDirectory, fileName)
+            FileOutputStream(imageFile).use { fileOutputStream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fileOutputStream)
             }
-
-            // Step 6: Close Streams
             inputStream?.close()
-            fileOutputStream.close()
-
-            //Step 8: update the upload success icon
             callback(true)
-
-            // Step 7: Return the file path
-            return File(externalStorageDirectory, fileName).absolutePath
+            imageFile.absolutePath
         } catch (e: IOException) {
-            // Handle exceptions, e.g., file not found, permissions, etc.
             e.printStackTrace()
             callback(false)
-
+            null
         }
-
-        return null
     }
 
-    //checking that the input fields are not blank
     private fun validateInput(itemDetails: ItemDetails = uiState.itemDetails): Boolean {
-        return with(itemDetails) {
-            name.isNotBlank() && cost.isNotBlank() && category.isNotBlank()
-        }
+        return itemDetails.cost.isNotBlank() && itemDetails.category.isNotBlank()
     }
 
-
+    companion object {
+        private const val TIMEOUT_MILLIS = 5_000L
+    }
 }
 
 data class SpendingItemDetailsUiState(
     val itemDetails: ItemDetails = ItemDetails(),
     val isEntryValid: Boolean = false,
     val previousCategory: String = "",
-    val isUploadSuccessful: Boolean = false
+    val isUploadSuccessful: Boolean = false,
 )
 
 data class ItemDetails(
@@ -187,21 +245,36 @@ data class ItemDetails(
     val category: String = "",
 )
 
+data class RecentTemplateUiModel(
+    val name: String,
+    val category: String,
+    val cost: String,
+)
 
-
+enum class SaveEntryResult {
+    Invalid,
+    SavedAndClose,
+    SavedAndReadyForNext,
+}
 
 fun ItemDetails.toItem(date: String): Item = Item(
     itemId = id,
     name = name,
     category = category,
     picturePath = imagePath,
-    date = date
+    date = date,
 )
 
-fun ItemDetails.toPurchaseDetails(month: Int, year:Int, date: String, itemId: Long) = PurchaseDetails (
+fun ItemDetails.toPurchaseDetails(month: Int, year: Int, date: String, itemId: Long) = PurchaseDetails(
     itemId = itemId,
     cost = cost.toDouble(),
     month = month,
     year = year,
-    purchaseDate = date
+    purchaseDate = date,
+)
+
+private fun RecentEntryTemplate.toUiModel(): RecentTemplateUiModel = RecentTemplateUiModel(
+    name = name,
+    category = category,
+    cost = cost.toString(),
 )

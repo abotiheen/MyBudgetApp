@@ -66,6 +66,7 @@ class ThisMonthScreenViewModel(
                 totalSpendingOnOthers = formatCurrencyIraqiDinar(tuple[4]),
                 totalSpendingOnTransportation = formatCurrencyIraqiDinar(tuple[3]),
                 currentMonth = Month.of(month).toString().capitalized(),
+                selectedMonth = month,
                 months = months.map {
                     DropDownItem(
                         title = (Month.of(it).toString()).capitalized(),
@@ -112,6 +113,7 @@ data class ScreenItemsUiState(
 
 data class ThisMonthScreenUiState(
     val currentMonth: String = "",
+    val selectedMonth: Int = 0,
     val totalSpending: String = "",
     val totalIncome: String = "",
     val totalSpendingOnFood: String = "",

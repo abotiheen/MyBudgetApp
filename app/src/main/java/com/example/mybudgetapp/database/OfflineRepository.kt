@@ -24,7 +24,7 @@ class OfflineRepository (
         imagePath = imagePath, id = id
     )
 
-    override suspend fun getItemIdFromName(name: String): Long = itemDao.getIdFromName(name)
+    override suspend fun getItemIdFromName(name: String): Long? = itemDao.getIdFromName(name)
 
 
     override suspend fun insetPurchaseDetails(purchaseDetails: PurchaseDetails)
@@ -74,6 +74,8 @@ class OfflineRepository (
         itemWithPurchaseDetailsDao.getTotalSpendingOverallForYear(year)
     override fun getItemDates(id: Long): Flow<List<PurchaseDetails>> =
         itemWithPurchaseDetailsDao.getALlDatesForAnItem(id)
+    override fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>> =
+        purchaseDetailsDao.getRecentEntryTemplates(limit)
 
 
 }

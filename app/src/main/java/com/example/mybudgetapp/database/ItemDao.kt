@@ -8,11 +8,16 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
+data class RecentEntryTemplate(
+    val name: String,
+    val category: String,
+    val cost: Double,
+)
 
 @Dao
 interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertItem(item: Item)
+    suspend fun insertItem(item: Item): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItems(items: List<Item>)
@@ -24,7 +29,7 @@ interface ItemDao {
     suspend fun deleteItem(item: Item)
 
     @Query("Select itemId from budget_item where LOWER(name) = LOWER(:name) ")
-    suspend fun getIdFromName(name: String): Long
+    suspend fun getIdFromName(name: String): Long?
 
     @Query("Select * from budget_item where itemId = :id ")
     fun getItemFromId(id: Long): Flow<Item>
@@ -84,6 +89,15 @@ interface PurchaseDetailsDao {
 
     @Query("select * from purchase_details order by purchaseId asc")
     suspend fun getAllPurchaseDetails(): List<PurchaseDetails>
+
+    @Query("""
+        select i.name as name, i.category as category, p.cost as cost
+        from purchase_details as p
+        join budget_item as i on i.itemId = p.itemId
+        order by p.purchaseId desc
+        limit :limit
+    """)
+    fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>
 
 
 

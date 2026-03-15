@@ -60,6 +60,7 @@ class ThisYearScreenViewModel(
                 totalSpendingOnOthersForYear = formatCurrencyIraqiDinar(tuple[4]),
                 totalSpendingOnTransportationForYear = formatCurrencyIraqiDinar(tuple[3]),
                 currentMonth = Month.of(month).toString().capitalized(),
+                selectedYear = selectedYear.value,
                 currentYear = selectedYear.value.toString(),
                 years = years.map {
                     DropDownItem(
@@ -101,6 +102,7 @@ class ThisYearScreenViewModel(
 
 data class ThisYearScreenUiState(
     val currentMonth: String = "",
+    val selectedYear: Int = 0,
     val currentYear: String = "",
     val totalSpendingForYear: String = "",
     val totalIncomeForYear: String = "",

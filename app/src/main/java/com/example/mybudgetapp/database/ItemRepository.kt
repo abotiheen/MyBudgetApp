@@ -4,11 +4,11 @@ import kotlinx.coroutines.flow.Flow
 
 interface ItemRepository {
 
-    suspend fun insertItem(item: Item)
+    suspend fun insertItem(item: Item): Long
     suspend fun updateItem(item: Item)
     suspend fun updateItemDateWithId(date:String, id: Long)
     suspend fun deleteItem(item: Item)
-    suspend fun getItemIdFromName(name:String): Long
+    suspend fun getItemIdFromName(name:String): Long?
 
     fun getItemFromId(id: Long): Flow<Item>
 
@@ -36,4 +36,5 @@ interface ItemRepository {
     fun getItemWithPurchaseDetailsForCategory(month: Int, year:Int, category: String): Flow<List<ItemWithPurchaseDetails>>
     fun getItemWithPurchaseDetailsForCategoryForYear(year:Int, category: String): Flow<List<ItemWithPurchaseDetails>>
     fun getItemDates(id: Long): Flow<List<PurchaseDetails>>
+    fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>
 }
