@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.mybudgetapp.ui.screens.AddingItem
 import com.example.mybudgetapp.ui.screens.AddingItemDestination
+import com.example.mybudgetapp.ui.screens.CloudBackupDestination
+import com.example.mybudgetapp.ui.screens.CloudBackupScreen
 import com.example.mybudgetapp.ui.screens.ItemDatesScreen
 import com.example.mybudgetapp.ui.screens.ItemDatesScreenNavigationDestination
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
@@ -47,6 +49,9 @@ fun AppNavHost (
                         "${TotalIncomeDestination.route}/$month/$isIncome"
                     )
                 },
+                navigateToCloudBackup = {
+                    navController.navigate(CloudBackupDestination.route)
+                },
                 navigateToThisYearScreen = {
                     navController.navigate(ThisYearDestination.route)
                                            }  ,
@@ -60,6 +65,9 @@ fun AppNavHost (
                 navigateToThisMonthScreen = {
                     navController.navigateUp()
                 },
+                navigateToCloudBackup = {
+                    navController.navigate(CloudBackupDestination.route)
+                },
                 navigateToSpendingOnCategoryForYear = { category, year ->
                     navController.navigate(
                         "${SpendingOnCategoryForYearDestination.route}/$category/$year"
@@ -70,6 +78,16 @@ fun AppNavHost (
                         "${TotalIncomeDestinationForYear.route}/$year/$isIncome"
                     )
                 }
+            )
+        }
+        composable(CloudBackupDestination.route) {
+            CloudBackupScreen(
+                navigateToThisMonthScreen = {
+                    navController.navigate(ThisMonthDestination.route)
+                },
+                navigateToThisYearScreen = {
+                    navController.navigate(ThisYearDestination.route)
+                },
             )
         }
         composable(

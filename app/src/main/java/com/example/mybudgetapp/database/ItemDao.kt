@@ -14,6 +14,9 @@ interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertItem(item: Item)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItems(items: List<Item>)
+
     @Update(onConflict = OnConflictStrategy.ABORT)
     suspend fun updateItem(item: Item)
 
@@ -46,12 +49,18 @@ interface ItemDao {
         """)
     suspend fun updateItemImagePathWithId(imagePath:String, id: Long)
 
+    @Query("select * from budget_item order by itemId asc")
+    suspend fun getAllItems(): List<Item>
+
 }
 
 @Dao
 interface PurchaseDetailsDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertItem(purchaseDetails: PurchaseDetails)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItems(purchaseDetails: List<PurchaseDetails>)
 
     @Update(onConflict = OnConflictStrategy.ABORT)
     suspend fun updateItem(purchaseDetails: PurchaseDetails)
@@ -72,6 +81,9 @@ interface PurchaseDetailsDao {
          order by year asc
     """)
     fun getAllYears(): Flow<List<Int>>
+
+    @Query("select * from purchase_details order by purchaseId asc")
+    suspend fun getAllPurchaseDetails(): List<PurchaseDetails>
 
 
 

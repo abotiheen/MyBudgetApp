@@ -6,7 +6,9 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "budget_item", indices = [Index(value = ["name"], unique = true)])
 data class Item(
     @PrimaryKey(autoGenerate = true)
@@ -17,6 +19,7 @@ data class Item(
     val picturePath: String? = null
 )
 
+@Serializable
 @Entity(
     tableName = "purchase_details",
     foreignKeys = [ForeignKey(
@@ -37,9 +40,9 @@ data class PurchaseDetails(
     val year: Int,
 )
 
+@Serializable
 data class ItemWithPurchaseDetails(
     @Embedded val item: Item,
     val totalCost: Double,
 )
-
 

@@ -25,6 +25,7 @@ import com.example.mybudgetapp.data.NavigationItems
 fun BottomNavigationBar(
     navigateToThisMonthScreen: () -> Unit,
     navigateToThisYearScreen: () -> Unit,
+    navigateToCloudBackupScreen: () -> Unit,
     selectedItemIndex: Int,
 ){
     NavigationBar (
@@ -39,7 +40,8 @@ fun BottomNavigationBar(
                 onClick = {
                     when(index) {
                         0 -> navigateToThisYearScreen()
-                        else -> navigateToThisMonthScreen()
+                        1 -> navigateToThisMonthScreen()
+                        else -> navigateToCloudBackupScreen()
                     }
 
                           },

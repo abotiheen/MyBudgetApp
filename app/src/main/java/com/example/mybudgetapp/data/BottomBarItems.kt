@@ -24,6 +24,12 @@ object NavigationItems {
             unSelectedIcon = R.drawable.outline_calendar_month_24,
             hasNews = false
         ),
+        BottomNavigationItem(
+            title = "Cloud",
+            selectedIcon = R.drawable.baseline_settings_24,
+            unSelectedIcon = R.drawable.outline_settings_24,
+            hasNews = false
+        ),
 
     )
 }

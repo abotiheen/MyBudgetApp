@@ -52,6 +52,7 @@ object ThisYearDestination: NavigationDestination {
 fun ThisYearScreen(
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
+    navigateToCloudBackup: () -> Unit,
     navigateToThisMonthScreen: () -> Unit ,
     navigateToThisYearScreen: () -> Unit
 ){
@@ -62,6 +63,7 @@ fun ThisYearScreen(
             BottomNavigationBar(
                 navigateToThisMonthScreen = navigateToThisMonthScreen,
                 navigateToThisYearScreen = navigateToThisYearScreen,
+                navigateToCloudBackupScreen = navigateToCloudBackup,
                 selectedItemIndex = 0
             )
         }
@@ -258,4 +260,3 @@ fun ThisYearScreenBody(
     }
 
 }
-

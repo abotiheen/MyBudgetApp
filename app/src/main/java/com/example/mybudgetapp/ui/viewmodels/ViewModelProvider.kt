@@ -58,6 +58,12 @@ object AppViewModelProvider {
                 this.createSavedStateHandle()
             )
         }
+        initializer {
+            CloudBackupViewModel(
+                budgetApplication().container.cloudAuthRepository,
+                budgetApplication().container.cloudBackupRepository,
+            )
+        }
 
 
     }
