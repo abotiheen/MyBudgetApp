@@ -52,6 +52,7 @@ object ThisYearDestination : NavigationDestination {
     override val titleRes = R.string.this_month_screen
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThisYearScreen(
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
@@ -107,7 +108,6 @@ fun ThisYearScreen(
                 navigateToSpendingOnCategoryForYear = navigateToSpendingOnCategoryForYear,
                 navigateToTotalIncomeForYear = navigateToTotalIncomeForYear,
                 navigateToInsights = navigateToInsights,
-                navigateToThisMonthScreen = navigateToThisMonthScreen,
             )
         }
 
@@ -145,7 +145,6 @@ fun ThisYearScreenBody(
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToInsights: (Int) -> Unit,
-    navigateToThisMonthScreen: () -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmountForYear - uiState.totalSpendingAmountForYear)
@@ -167,10 +166,6 @@ fun ThisYearScreenBody(
         item {
             DashboardCommandDeck(
                 title = "This year",
-                subtitle = "A broader view built around balance, monthly drift, and the categories carrying the year.",
-                currentViewLabel = "Year",
-                alternateViewLabel = "Month",
-                onOpenAlternateView = navigateToThisMonthScreen,
                 selectedPeriodLabel = uiState.currentYear,
                 canNavigatePrevious = uiState.canNavigatePrevious,
                 canNavigateNext = uiState.canNavigateNext,

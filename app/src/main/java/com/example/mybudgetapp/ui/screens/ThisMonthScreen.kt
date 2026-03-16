@@ -106,7 +106,6 @@ fun ThisMonthScreen(
                 navigateToSpendingOnCategory = navigateToSpendingOnCategory,
                 navigateToTotalIncome = navigateToTotalIncome,
                 navigateToInsights = navigateToInsights,
-                navigateToThisYearScreen = navigateToThisYearScreen,
             )
         }
 
@@ -144,7 +143,6 @@ fun ThisMonthScreenBody(
     navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToInsights: (Int, Int) -> Unit,
-    navigateToThisYearScreen: () -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmount - uiState.totalSpendingAmount)
@@ -165,10 +163,6 @@ fun ThisMonthScreenBody(
         item {
             DashboardCommandDeck(
                 title = "This month",
-                subtitle = "A lighter overview focused on balance, latest activity, and the three spending categories that matter.",
-                currentViewLabel = "Month",
-                alternateViewLabel = "Year",
-                onOpenAlternateView = navigateToThisYearScreen,
                 selectedPeriodLabel = uiState.periodLabel,
                 canNavigatePrevious = uiState.canNavigatePrevious,
                 canNavigateNext = uiState.canNavigateNext,
