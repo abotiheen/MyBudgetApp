@@ -1,5 +1,8 @@
 package com.example.mybudgetapp.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -36,7 +39,19 @@ fun AppNavHost (
     NavHost(
         navController = navController ,
         startDestination = ThisMonthDestination.route,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = {
+            fadeIn(animationSpec = tween(durationMillis = 180))
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(durationMillis = 140))
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(durationMillis = 180))
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(durationMillis = 140))
+        },
     ) {
         composable(ThisMonthDestination.route) {
             ThisMonthScreen(
@@ -54,26 +69,12 @@ fun AppNavHost (
                     navController.navigate(
                         "${InsightsDestination.route}/month/$year/$month"
                     )
-                },
-                navigateToCloudBackup = {
-                    navController.navigate(CloudBackupDestination.route)
-                },
-                navigateToThisYearScreen = {
-                    navController.navigate(ThisYearDestination.route)
-                                           }  ,
-                navigateToThisMonthScreen = {}
+                }
             )
         }
 
         composable(ThisYearDestination.route) {
             ThisYearScreen(
-                navigateToThisYearScreen = {},
-                navigateToThisMonthScreen = {
-                    navController.navigateUp()
-                },
-                navigateToCloudBackup = {
-                    navController.navigate(CloudBackupDestination.route)
-                },
                 navigateToInsights = { year ->
                     navController.navigate(
                         "${InsightsDestination.route}/year/$year/0"
@@ -92,14 +93,7 @@ fun AppNavHost (
             )
         }
         composable(CloudBackupDestination.route) {
-            CloudBackupScreen(
-                navigateToThisMonthScreen = {
-                    navController.navigate(ThisMonthDestination.route)
-                },
-                navigateToThisYearScreen = {
-                    navController.navigate(ThisYearDestination.route)
-                },
-            )
+            CloudBackupScreen()
         }
         composable(
             route = InsightsDestination.routeWithArgs,

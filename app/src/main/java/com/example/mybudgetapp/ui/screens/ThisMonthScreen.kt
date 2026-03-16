@@ -1,6 +1,12 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,9 +24,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -40,10 +49,11 @@ import com.example.mybudgetapp.ui.viewmodels.MonthPeriodOption
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisMonthScreenViewModel
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
-import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 object ThisMonthDestination : NavigationDestination {
     override val route = "ThisMonthScreen"
@@ -56,9 +66,6 @@ fun ThisMonthScreen(
     navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToInsights: (Int, Int) -> Unit,
-    navigateToCloudBackup: () -> Unit,
-    navigateToThisMonthScreen: () -> Unit,
-    navigateToThisYearScreen: () -> Unit,
 ) {
     val viewModel: ThisMonthScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
@@ -87,14 +94,6 @@ fun ThisMonthScreen(
                     modifier = Modifier.size(28.dp),
                 )
             }
-        },
-        bottomBar = {
-            BottomNavigationBar(
-                navigateToThisMonthScreen = navigateToThisMonthScreen,
-                navigateToThisYearScreen = navigateToThisYearScreen,
-                navigateToCloudBackupScreen = navigateToCloudBackup,
-                selectedItemIndex = 1,
-            )
         },
     ) { innerPadding ->
         BudgetBackdrop(modifier = Modifier.padding(innerPadding)) {
@@ -278,37 +277,71 @@ private fun MonthPeriodPickerBottomSheet(
     onSelectPeriod: (MonthPeriodOption) -> Unit,
     onJumpToCurrent: () -> Unit,
 ) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    var sheetContentVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        sheetContentVisible = true
+        sheetState.show()
+    }
+
+    fun dismissSheet(action: () -> Unit = {}) {
+        coroutineScope.launch {
+            sheetContentVisible = false
+            delay(120)
+            sheetState.hide()
+            action()
+            onDismissRequest()
+        }
+    }
+
     ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { dismissSheet() },
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.background,
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(
-                start = BudgetTheme.spacing.xl,
-                end = BudgetTheme.spacing.xl,
-                top = BudgetTheme.spacing.sm,
-                bottom = BudgetTheme.spacing.xxl,
-            ),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+        AnimatedVisibility(
+            visible = sheetContentVisible,
+            enter = fadeIn(animationSpec = tween(durationMillis = 220)) +
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 260),
+                    initialOffsetY = { it / 8 },
+                ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 120)) +
+                slideOutVertically(
+                    animationSpec = tween(durationMillis = 180),
+                    targetOffsetY = { it / 8 },
+                ),
         ) {
-            item {
-                SectionHeading(
-                    title = "Jump to month",
-                    subtitle = "Move across your timeline without stepping through each month one by one.",
-                )
-            }
-            item {
-                PeriodSheetRow(
-                    label = "This month",
-                    onClick = onJumpToCurrent,
-                )
-            }
-            items(periods.size) { index ->
-                PeriodSheetRow(
-                    label = periods[index].label,
-                    onClick = { onSelectPeriod(periods[index]) },
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(
+                    start = BudgetTheme.spacing.xl,
+                    end = BudgetTheme.spacing.xl,
+                    top = BudgetTheme.spacing.sm,
+                    bottom = BudgetTheme.spacing.xxl,
+                ),
+                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            ) {
+                item {
+                    SectionHeading(
+                        title = "Jump to month",
+                        subtitle = "Move across your timeline without stepping through each month one by one.",
+                    )
+                }
+                item {
+                    PeriodSheetRow(
+                        label = "This month",
+                        onClick = { dismissSheet(onJumpToCurrent) },
+                    )
+                }
+                items(periods.size) { index ->
+                    PeriodSheetRow(
+                        label = periods[index].label,
+                        onClick = { dismissSheet { onSelectPeriod(periods[index]) } },
+                    )
+                }
             }
         }
     }

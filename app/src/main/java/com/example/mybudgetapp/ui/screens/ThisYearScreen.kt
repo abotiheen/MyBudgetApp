@@ -1,6 +1,12 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,9 +25,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -40,12 +49,13 @@ import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.ThisYearScreenUiState
 import com.example.mybudgetapp.ui.viewmodels.ThisYearScreenViewModel
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
-import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.DropDownItem
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
 import java.time.Year
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 object ThisYearDestination : NavigationDestination {
     override val route = "ThisYearScreen"
@@ -58,9 +68,6 @@ fun ThisYearScreen(
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToInsights: (Int) -> Unit,
-    navigateToCloudBackup: () -> Unit,
-    navigateToThisMonthScreen: () -> Unit,
-    navigateToThisYearScreen: () -> Unit,
 ) {
     val viewModel: ThisYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
@@ -89,14 +96,6 @@ fun ThisYearScreen(
                     modifier = Modifier.size(28.dp),
                 )
             }
-        },
-        bottomBar = {
-            BottomNavigationBar(
-                navigateToThisMonthScreen = navigateToThisMonthScreen,
-                navigateToThisYearScreen = navigateToThisYearScreen,
-                navigateToCloudBackupScreen = navigateToCloudBackup,
-                selectedItemIndex = 0,
-            )
         },
     ) { innerPadding ->
         BudgetBackdrop(modifier = Modifier.padding(innerPadding)) {
@@ -271,37 +270,71 @@ private fun YearPickerBottomSheet(
     onSelectYear: (DropDownItem) -> Unit,
     onJumpToCurrent: () -> Unit,
 ) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    var sheetContentVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        sheetContentVisible = true
+        sheetState.show()
+    }
+
+    fun dismissSheet(action: () -> Unit = {}) {
+        coroutineScope.launch {
+            sheetContentVisible = false
+            delay(120)
+            sheetState.hide()
+            action()
+            onDismissRequest()
+        }
+    }
+
     ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { dismissSheet() },
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.background,
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(
-                start = BudgetTheme.spacing.xl,
-                end = BudgetTheme.spacing.xl,
-                top = BudgetTheme.spacing.sm,
-                bottom = BudgetTheme.spacing.xxl,
-            ),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+        AnimatedVisibility(
+            visible = sheetContentVisible,
+            enter = fadeIn(animationSpec = tween(durationMillis = 220)) +
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 260),
+                    initialOffsetY = { it / 8 },
+                ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 120)) +
+                slideOutVertically(
+                    animationSpec = tween(durationMillis = 180),
+                    targetOffsetY = { it / 8 },
+                ),
         ) {
-            item {
-                SectionHeading(
-                    title = "Jump to year",
-                    subtitle = "Move across annual views without stepping through each year one by one.",
-                )
-            }
-            item {
-                YearSheetRow(
-                    label = "This year",
-                    onClick = onJumpToCurrent,
-                )
-            }
-            items(years.size) { index ->
-                YearSheetRow(
-                    label = years[index].title,
-                    onClick = { onSelectYear(years[index]) },
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(
+                    start = BudgetTheme.spacing.xl,
+                    end = BudgetTheme.spacing.xl,
+                    top = BudgetTheme.spacing.sm,
+                    bottom = BudgetTheme.spacing.xxl,
+                ),
+                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            ) {
+                item {
+                    SectionHeading(
+                        title = "Jump to year",
+                        subtitle = "Move across annual views without stepping through each year one by one.",
+                    )
+                }
+                item {
+                    YearSheetRow(
+                        label = "This year",
+                        onClick = { dismissSheet(onJumpToCurrent) },
+                    )
+                }
+                items(years.size) { index ->
+                    YearSheetRow(
+                        label = years[index].title,
+                        onClick = { dismissSheet { onSelectYear(years[index]) } },
+                    )
+                }
             }
         }
     }

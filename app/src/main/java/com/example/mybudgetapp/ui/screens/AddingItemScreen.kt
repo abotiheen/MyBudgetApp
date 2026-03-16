@@ -6,6 +6,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.animateContentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
@@ -45,8 +55,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +87,7 @@ import com.example.mybudgetapp.ui.viewmodels.SaveEntryResult
 import com.example.mybudgetapp.ui.viewmodels.SpendingItemDetailsUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 object AddingItemDestination : NavigationDestination {
@@ -111,50 +124,77 @@ fun QuickAddBottomSheet(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var sheetContentVisible by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
-        onDismissRequest = {
+    fun dismissSheet() {
+        coroutineScope.launch {
+            sheetContentVisible = false
+            delay(140)
+            sheetState.hide()
             viewModel.resetEntry()
             onDismissRequest()
-        },
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        sheetContentVisible = true
+        sheetState.show()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { dismissSheet() },
         modifier = modifier,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.background,
     ) {
-        AddingItemBody(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(bottom = 12.dp),
-            surfaceMode = EntrySurfaceMode.Sheet,
-            onImageSelected = { entryContext: Context, uri: Uri? ->
-                viewModel.onImageSelected(context = entryContext, uri = uri)
-            },
-            itemDetails = uiState.itemDetails,
-            recentTemplates = recentTemplates,
-            onTemplateSelected = viewModel::applyTemplate,
-            saveItem = { stayOnScreen ->
-                coroutineScope.launch {
-                    when (viewModel.saveEntry(stayOnScreen = stayOnScreen)) {
-                        SaveEntryResult.Invalid -> {
-                            Toast.makeText(context, R.string.quick_add_validation_error, Toast.LENGTH_SHORT).show()
-                        }
+        AnimatedVisibility(
+            visible = sheetContentVisible,
+            enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 280),
+                    initialOffsetY = { it / 10 },
+                ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 200)) +
+                slideOutVertically(
+                    animationSpec = tween(durationMillis = 200),
+                    targetOffsetY = { it / 10 },
+                ),
+        ) {
+            AddingItemBody(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.9f)
+                    .padding(bottom = 12.dp),
+                surfaceMode = EntrySurfaceMode.Sheet,
+                onImageSelected = { entryContext: Context, uri: Uri? ->
+                    viewModel.onImageSelected(context = entryContext, uri = uri)
+                },
+                itemDetails = uiState.itemDetails,
+                recentTemplates = recentTemplates,
+                onTemplateSelected = viewModel::applyTemplate,
+                saveItem = { stayOnScreen ->
+                    coroutineScope.launch {
+                        when (viewModel.saveEntry(stayOnScreen = stayOnScreen)) {
+                            SaveEntryResult.Invalid -> {
+                                Toast.makeText(context, R.string.quick_add_validation_error, Toast.LENGTH_SHORT).show()
+                            }
 
-                        SaveEntryResult.SavedAndClose -> {
-                            Toast.makeText(context, R.string.item_added, Toast.LENGTH_SHORT).show()
-                            viewModel.resetEntry()
-                            onDismissRequest()
-                        }
+                            SaveEntryResult.SavedAndClose -> {
+                                Toast.makeText(context, R.string.item_added, Toast.LENGTH_SHORT).show()
+                                dismissSheet()
+                            }
 
-                        SaveEntryResult.SavedAndReadyForNext -> {
-                            Toast.makeText(context, R.string.item_saved_ready_for_next, Toast.LENGTH_SHORT).show()
+                            SaveEntryResult.SavedAndReadyForNext -> {
+                                Toast.makeText(context, R.string.item_saved_ready_for_next, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
-                }
-            },
-            onItemValueChange = viewModel::updateUiState,
-            isEntryValid = uiState.isEntryValid,
-            previousCategory = uiState.previousCategory,
-        )
+                },
+                onItemValueChange = viewModel::updateUiState,
+                isEntryValid = uiState.isEntryValid,
+                previousCategory = uiState.previousCategory,
+            )
+        }
     }
 }
 
@@ -312,11 +352,17 @@ private fun AddingItemBody(
         "income" -> BudgetTheme.extendedColors.income
         else -> MaterialTheme.colorScheme.primary
     }
+    val animatedAccentColor = animateColorAsState(
+        targetValue = accentColor,
+        animationSpec = tween(durationMillis = 260),
+        label = "entryAccent",
+    )
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
+            .animateContentSize(animationSpec = tween(durationMillis = 240))
             .padding(horizontal = 18.dp, vertical = if (surfaceMode == EntrySurfaceMode.Sheet) 8.dp else 12.dp),
         verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
     ) {
@@ -326,39 +372,66 @@ private fun AddingItemBody(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
         ) {
-            EntryHeroCard(
-                surfaceMode = surfaceMode,
-                accentColor = accentColor,
-                itemDetails = itemDetails,
-                amountFocusRequester = amountFocusRequester,
-                onItemValueChange = onItemValueChange,
-                activeCategory = activeCategory,
-            )
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(durationMillis = 220, delayMillis = 30)) +
+                    slideInVertically(
+                        animationSpec = tween(durationMillis = 320, delayMillis = 30),
+                        initialOffsetY = { it / 8 },
+                    ),
+            ) {
+                EntryHeroCard(
+                    surfaceMode = surfaceMode,
+                    accentColor = animatedAccentColor.value,
+                    itemDetails = itemDetails,
+                    amountFocusRequester = amountFocusRequester,
+                    onItemValueChange = onItemValueChange,
+                    activeCategory = activeCategory,
+                )
+            }
 
-            EntryUtilityTray(
-                categories = quickCategories,
-                selectedCategory = itemDetails.category,
-                accentColor = accentColor,
-                recentTemplates = recentTemplates,
-                showPhotoAction = activeCategory != "income",
-                imagePath = itemDetails.imagePath,
-                onCategorySelected = { category ->
-                    onItemValueChange(itemDetails.copy(category = category))
-                },
-                onPickPhoto = {
-                    photoPickerLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                    )
-                },
-                onTemplateSelected = onTemplateSelected,
-            )
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(durationMillis = 220, delayMillis = 90)) +
+                    slideInVertically(
+                        animationSpec = tween(durationMillis = 320, delayMillis = 90),
+                        initialOffsetY = { it / 10 },
+                    ),
+            ) {
+                EntryUtilityTray(
+                    categories = quickCategories,
+                    selectedCategory = itemDetails.category,
+                    accentColor = animatedAccentColor.value,
+                    recentTemplates = recentTemplates,
+                    showPhotoAction = activeCategory != "income",
+                    imagePath = itemDetails.imagePath,
+                    onCategorySelected = { category ->
+                        onItemValueChange(itemDetails.copy(category = category))
+                    },
+                    onPickPhoto = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                        )
+                    },
+                    onTemplateSelected = onTemplateSelected,
+                )
+            }
         }
 
-        SaveDock(
-            isEntryValid = isEntryValid,
-            saveItem = saveItem,
-            isSheet = surfaceMode == EntrySurfaceMode.Sheet,
-        )
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(durationMillis = 220, delayMillis = 140)) +
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 300, delayMillis = 140),
+                    initialOffsetY = { it / 12 },
+                ),
+        ) {
+            SaveDock(
+                isEntryValid = isEntryValid,
+                saveItem = saveItem,
+                isSheet = surfaceMode == EntrySurfaceMode.Sheet,
+            )
+        }
     }
 }
 
@@ -512,7 +585,9 @@ private fun EntryUtilityTray(
         elevation = CardDefaults.cardElevation(BudgetTheme.elevations.level1),
     ) {
         Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
+            modifier = Modifier
+                .padding(BudgetTheme.spacing.lg)
+                .animateContentSize(animationSpec = tween(durationMillis = 220)),
             verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
         ) {
             Text(
@@ -546,11 +621,19 @@ private fun EntryUtilityTray(
                 }
             }
 
-            if (imagePath != null && showPhotoAction) {
-                AttachedPhotoPreview(
-                    imagePath = imagePath,
-                    accentColor = accentColor,
-                )
+            AnimatedVisibility(
+                visible = imagePath != null && showPhotoAction,
+                enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
+                    expandVertically(animationSpec = tween(durationMillis = 240)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 120)) +
+                    shrinkVertically(animationSpec = tween(durationMillis = 180)),
+            ) {
+                if (imagePath != null) {
+                    AttachedPhotoPreview(
+                        imagePath = imagePath,
+                        accentColor = accentColor,
+                    )
+                }
             }
 
             if (recentTemplates.isNotEmpty()) {
@@ -583,13 +666,37 @@ private fun CompactCategoryChip(
     accentColor: Color,
     onClick: () -> Unit,
 ) {
+    val backgroundColor = animateColorAsState(
+        targetValue = if (selected) {
+            accentColor.copy(alpha = 0.14f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "categoryChipBackground",
+    )
+    val borderColor = animateColorAsState(
+        targetValue = if (selected) {
+            accentColor.copy(alpha = 0.28f)
+        } else {
+            MaterialTheme.colorScheme.outlineVariant
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "categoryChipBorder",
+    )
+    val contentColor = animateColorAsState(
+        targetValue = if (selected) accentColor else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 180),
+        label = "categoryChipContent",
+    )
+
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
-        color = if (selected) accentColor.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surface,
+        color = backgroundColor.value,
         shape = RoundedCornerShape(BudgetTheme.radii.pill),
         border = BorderStroke(
             width = 1.dp,
-            color = if (selected) accentColor.copy(alpha = 0.28f) else MaterialTheme.colorScheme.outlineVariant,
+            color = borderColor.value,
         ),
     ) {
         Row(
@@ -601,12 +708,12 @@ private fun CompactCategoryChip(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = accentColor,
+                tint = contentColor.value,
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (selected) accentColor else MaterialTheme.colorScheme.onSurface,
+                color = contentColor.value,
             )
         }
     }
@@ -731,6 +838,16 @@ private fun SaveDock(
     saveItem: (Boolean) -> Unit,
     isSheet: Boolean,
 ) {
+    val statusColor = animateColorAsState(
+        targetValue = if (isEntryValid) {
+            BudgetTheme.extendedColors.income
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "saveDockStatusColor",
+    )
+
     Card(
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
@@ -745,11 +862,7 @@ private fun SaveDock(
             Text(
                 text = if (isEntryValid) "Ready to save" else "Amount and category are required",
                 style = MaterialTheme.typography.labelLarge,
-                color = if (isEntryValid) {
-                    BudgetTheme.extendedColors.income
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                color = statusColor.value,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -1,13 +1,12 @@
 package com.example.mybudgetapp.ui.widgets
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -106,78 +105,60 @@ fun BottomNavigationBar(
     selectedItemIndex: Int,
 ) {
     val spacing = BudgetTheme.spacing
-    Surface(
+    AnimatedSegmentedControl(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = spacing.lg, vertical = spacing.sm),
-        shape = RoundedCornerShape(BudgetTheme.radii.xl),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-        shadowElevation = BudgetTheme.elevations.level3,
-        tonalElevation = 0.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = BudgetTheme.extendedColors.edge,
-                    shape = RoundedCornerShape(BudgetTheme.radii.xl),
-                )
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NavigationItems.items.forEachIndexed { index, item ->
-                val selected = selectedItemIndex == index
-                val onClick = {
-                    when (index) {
-                        0 -> navigateToThisYearScreen()
-                        1 -> navigateToThisMonthScreen()
-                        else -> navigateToCloudBackupScreen()
-                    }
-                }
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 4.dp)
-                        .clickable(onClick = onClick),
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        Color.Transparent
-                    },
-                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            painter = if (selected) {
-                                painterResource(id = item.selectedIcon)
-                            } else {
-                                painterResource(id = item.unSelectedIcon)
-                            },
-                            contentDescription = item.title,
-                            tint = if (selected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
-                }
+            .padding(horizontal = spacing.lg, vertical = spacing.xs),
+        selectedIndex = selectedItemIndex,
+        itemCount = NavigationItems.items.size,
+        onItemSelected = { index ->
+            when (index) {
+                0 -> navigateToThisYearScreen()
+                1 -> navigateToThisMonthScreen()
+                else -> navigateToCloudBackupScreen()
             }
+        },
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        indicatorColor = MaterialTheme.colorScheme.primary,
+        borderColor = BudgetTheme.extendedColors.edge,
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        itemShape = RoundedCornerShape(BudgetTheme.radii.md),
+        shadowElevation = BudgetTheme.elevations.level3,
+        contentPadding = 6.dp,
+        itemSpacing = 4.dp,
+        itemMinHeight = 48.dp,
+    ) { index, selected ->
+        val item = NavigationItems.items[index]
+        val contentColor = animateColorAsState(
+            targetValue = if (selected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            animationSpec = tween(durationMillis = 220),
+            label = "bottomNavContentColor",
+        )
+
+        Column(
+            modifier = Modifier.padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(
+                painter = if (selected) {
+                    painterResource(id = item.selectedIcon)
+                } else {
+                    painterResource(id = item.unSelectedIcon)
+                },
+                contentDescription = item.title,
+                modifier = Modifier.size(20.dp),
+                tint = contentColor.value,
+            )
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor.value,
+            )
         }
     }
 }

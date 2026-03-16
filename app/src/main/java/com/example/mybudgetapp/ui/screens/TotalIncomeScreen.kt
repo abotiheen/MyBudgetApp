@@ -40,8 +40,10 @@ import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.SpendingItem
 import com.example.mybudgetapp.ui.viewmodels.TotalSpendingScreenViewModel
 import com.example.mybudgetapp.ui.viewmodels.TotalSpendingUiState
+import com.example.mybudgetapp.ui.widgets.AnimatedSegmentedControl
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 
 object TotalIncomeDestination : NavigationDestination {
     override val route = "TotalIncome"
@@ -202,55 +204,22 @@ private fun TransactionTypeSwitch(
     isIncome: Boolean,
     onToggleType: (Boolean) -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+    AnimatedSegmentedControl(
+        selectedIndex = if (isIncome) 1 else 0,
+        itemCount = 2,
+        onItemSelected = { index -> onToggleType(index == 1) },
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        indicatorColor = MaterialTheme.colorScheme.primary,
         shape = RoundedCornerShape(BudgetTheme.radii.pill),
+        itemShape = RoundedCornerShape(BudgetTheme.radii.pill),
         shadowElevation = BudgetTheme.elevations.level2,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            TransactionTypeChip(
-                label = "Expenses",
-                selected = !isIncome,
-                modifier = Modifier.weight(1f),
-                onClick = { onToggleType(false) },
-            )
-            TransactionTypeChip(
-                label = "Income",
-                selected = isIncome,
-                modifier = Modifier.weight(1f),
-                onClick = { onToggleType(true) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun TransactionTypeChip(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-        shape = RoundedCornerShape(BudgetTheme.radii.pill),
-    ) {
-        Box(
-            modifier = Modifier.padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
+        itemSpacing = 6.dp,
+        itemMinHeight = 46.dp,
+    ) { index, selected ->
+        SegmentedTextLabel(
+            text = if (index == 0) "Expenses" else "Income",
+            selected = selected,
+        )
     }
 }
 

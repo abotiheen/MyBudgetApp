@@ -49,7 +49,6 @@ import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.CloudBackupUiState
 import com.example.mybudgetapp.ui.viewmodels.CloudBackupViewModel
-import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 
@@ -59,10 +58,7 @@ object CloudBackupDestination : NavigationDestination {
 }
 
 @Composable
-fun CloudBackupScreen(
-    navigateToThisMonthScreen: () -> Unit,
-    navigateToThisYearScreen: () -> Unit,
-) {
+fun CloudBackupScreen() {
     val viewModel: CloudBackupViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState by viewModel.uiState.collectAsState()
 
@@ -72,14 +68,6 @@ fun CloudBackupScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
-        bottomBar = {
-            BottomNavigationBar(
-                navigateToThisMonthScreen = navigateToThisMonthScreen,
-                navigateToThisYearScreen = navigateToThisYearScreen,
-                navigateToCloudBackupScreen = {},
-                selectedItemIndex = 2,
-            )
-        }
     ) { innerPadding ->
         BudgetBackdrop(modifier = Modifier.padding(innerPadding)) {
             CloudBackupBody(
