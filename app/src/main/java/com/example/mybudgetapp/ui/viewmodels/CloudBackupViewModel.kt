@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.cloud.CloudAuthRepository
 import com.example.mybudgetapp.cloud.CloudBackupConfig
 import com.example.mybudgetapp.cloud.CloudBackupRepository
+import com.example.mybudgetapp.cloud.LocalJsonBackupRepository
+import com.example.mybudgetapp.cloud.LocalSpreadsheetExportRepository
 import com.example.mybudgetapp.cloud.UserSession
+import android.net.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +19,8 @@ import kotlinx.coroutines.launch
 class CloudBackupViewModel(
     private val authRepository: CloudAuthRepository,
     private val backupRepository: CloudBackupRepository,
+    private val spreadsheetExportRepository: LocalSpreadsheetExportRepository,
+    private val jsonBackupRepository: LocalJsonBackupRepository,
 ) : ViewModel() {
     private val isBusy = MutableStateFlow(false)
     private val statusMessage = MutableStateFlow<String?>(null)
@@ -116,6 +121,51 @@ class CloudBackupViewModel(
         runCloudTask(task = {
             backupRepository.restoreBackup()
         })
+    }
+
+    fun exportSpreadsheet() {
+        viewModelScope.launch {
+            isBusy.value = true
+            statusMessage.value = null
+            spreadsheetExportRepository.exportSpreadsheet()
+                .onSuccess { message ->
+                    statusMessage.value = message
+                }
+                .onFailure { error ->
+                    statusMessage.value = error.message
+                }
+            isBusy.value = false
+        }
+    }
+
+    fun exportJsonBackup() {
+        viewModelScope.launch {
+            isBusy.value = true
+            statusMessage.value = null
+            jsonBackupRepository.exportJsonBackup()
+                .onSuccess { message ->
+                    statusMessage.value = message
+                }
+                .onFailure { error ->
+                    statusMessage.value = error.message
+                }
+            isBusy.value = false
+        }
+    }
+
+    fun restoreJsonBackup(uri: Uri) {
+        viewModelScope.launch {
+            isBusy.value = true
+            statusMessage.value = null
+            jsonBackupRepository.restoreJsonBackup(uri)
+                .onSuccess { message ->
+                    statusMessage.value = message
+                }
+                .onFailure { error ->
+                    statusMessage.value = error.message
+                }
+            isBusy.value = false
+        }
     }
 
     fun refreshStatus() {

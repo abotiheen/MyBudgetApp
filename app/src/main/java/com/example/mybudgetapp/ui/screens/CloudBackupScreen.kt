@@ -1,5 +1,8 @@
 package com.example.mybudgetapp.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +64,12 @@ object CloudBackupDestination : NavigationDestination {
 fun CloudBackupScreen() {
     val viewModel: CloudBackupViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState by viewModel.uiState.collectAsState()
+    var pendingRestoreUri by rememberSaveable { mutableStateOf<String?>(null) }
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        pendingRestoreUri = uri?.toString()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshStatus()
@@ -74,6 +83,9 @@ fun CloudBackupScreen() {
                 uiState = uiState,
                 onSignIn = viewModel::signIn,
                 onSignUp = viewModel::signUp,
+                onExportJson = viewModel::exportJsonBackup,
+                onRestoreJson = { restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
+                onExportSpreadsheet = viewModel::exportSpreadsheet,
                 onUpload = viewModel::uploadBackup,
                 onRestore = viewModel::restoreBackup,
                 onRefresh = viewModel::refreshStatus,
@@ -83,6 +95,19 @@ fun CloudBackupScreen() {
             )
         }
     }
+
+    pendingRestoreUri?.let { uriString ->
+        ConfirmCloudDeleteDialog(
+            title = "Restore offline backup?",
+            body = "This replaces the current local categories and transactions with the contents of the selected JSON backup.",
+            confirmLabel = "Restore backup",
+            onConfirm = {
+                viewModel.restoreJsonBackup(Uri.parse(uriString))
+                pendingRestoreUri = null
+            },
+            onDismiss = { pendingRestoreUri = null },
+        )
+    }
 }
 
 @Composable
@@ -91,6 +116,9 @@ private fun CloudBackupBody(
     uiState: CloudBackupUiState,
     onSignIn: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
+    onExportJson: () -> Unit,
+    onRestoreJson: () -> Unit,
+    onExportSpreadsheet: () -> Unit,
     onUpload: () -> Unit,
     onRestore: () -> Unit,
     onRefresh: () -> Unit,
@@ -115,6 +143,20 @@ private fun CloudBackupBody(
     ) {
         item {
             VaultHeroCard(uiState = uiState)
+        }
+
+        item {
+            LocalExportCard(
+                isBusy = uiState.isBusy,
+                onExportSpreadsheet = onExportSpreadsheet,
+            )
+        }
+        item {
+            OfflineBackupCard(
+                isBusy = uiState.isBusy,
+                onExportJson = onExportJson,
+                onRestoreJson = onRestoreJson,
+            )
         }
 
         uiState.statusMessage?.takeIf { it.isNotBlank() }?.let { message ->
@@ -181,6 +223,85 @@ private fun CloudBackupBody(
             },
             onDismiss = { pendingAction = null },
         )
+    }
+}
+
+@Composable
+private fun LocalExportCard(
+    isBusy: Boolean,
+    onExportSpreadsheet: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            SectionHeading(
+                title = "Local spreadsheet export",
+                subtitle = "Save an Excel-compatible workbook with Categories and Transactions directly to Downloads.",
+            )
+            VaultActionButton(
+                label = "Export Excel",
+                onClick = onExportSpreadsheet,
+                enabled = !isBusy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = "This works without signing in. The file is written locally, not uploaded to Supabase.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun OfflineBackupCard(
+    isBusy: Boolean,
+    onExportJson: () -> Unit,
+    onRestoreJson: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            SectionHeading(
+                title = "Offline backup",
+                subtitle = "Create a native JSON backup or restore one from local storage.",
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+            ) {
+                VaultActionButton(
+                    label = "Export JSON",
+                    onClick = onExportJson,
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                )
+                VaultActionButton(
+                    label = "Restore JSON",
+                    onClick = onRestoreJson,
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = "Restore replaces your current local data with the selected offline backup.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

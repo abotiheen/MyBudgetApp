@@ -5,6 +5,10 @@ import com.example.mybudgetapp.cloud.CloudAuthRepository
 import com.example.mybudgetapp.cloud.CloudBackupLocalDataSource
 import com.example.mybudgetapp.cloud.CloudBackupRepository
 import com.example.mybudgetapp.cloud.CloudSessionStore
+import com.example.mybudgetapp.cloud.DeviceJsonBackupRepository
+import com.example.mybudgetapp.cloud.ExcelCompatibleSpreadsheetExportRepository
+import com.example.mybudgetapp.cloud.LocalJsonBackupRepository
+import com.example.mybudgetapp.cloud.LocalSpreadsheetExportRepository
 import com.example.mybudgetapp.cloud.SupabaseAuthRepository
 import com.example.mybudgetapp.cloud.SupabaseCloudBackupRepository
 
@@ -12,6 +16,8 @@ interface AppContainer {
     val itemRepository: ItemRepository
     val cloudAuthRepository: CloudAuthRepository
     val cloudBackupRepository: CloudBackupRepository
+    val localSpreadsheetExportRepository: LocalSpreadsheetExportRepository
+    val localJsonBackupRepository: LocalJsonBackupRepository
 }
 
 class AppDataContainer(context: Context) : AppContainer {
@@ -21,6 +27,10 @@ class AppDataContainer(context: Context) : AppContainer {
 
     private val sessionStore: CloudSessionStore by lazy {
         CloudSessionStore(context)
+    }
+
+    private val cloudBackupLocalDataSource: CloudBackupLocalDataSource by lazy {
+        CloudBackupLocalDataSource(database)
     }
 
     override val itemRepository: ItemRepository by lazy {
@@ -37,8 +47,22 @@ class AppDataContainer(context: Context) : AppContainer {
     override val cloudBackupRepository: CloudBackupRepository by lazy {
         SupabaseCloudBackupRepository(
             authRepository = cloudAuthRepository,
-            localDataSource = CloudBackupLocalDataSource(database),
+            localDataSource = cloudBackupLocalDataSource,
             sessionStore = sessionStore,
+        )
+    }
+
+    override val localSpreadsheetExportRepository: LocalSpreadsheetExportRepository by lazy {
+        ExcelCompatibleSpreadsheetExportRepository(
+            context = context,
+            localDataSource = cloudBackupLocalDataSource,
+        )
+    }
+
+    override val localJsonBackupRepository: LocalJsonBackupRepository by lazy {
+        DeviceJsonBackupRepository(
+            context = context,
+            localDataSource = cloudBackupLocalDataSource,
         )
     }
 }
