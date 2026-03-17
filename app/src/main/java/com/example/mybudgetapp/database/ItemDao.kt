@@ -28,6 +28,42 @@ interface TransactionDao {
     @Query("select * from transactions where transactionId = :id")
     fun getTransaction(id: Long): Flow<BudgetTransaction>
 
+    @Query(
+        """
+        select * from transactions
+        where lower(ifnull(nullif(trim(title), ''), 'item')) = lower(:title)
+          and category = :category
+          and type = :type
+          and cast(strftime('%m', transactionDate) as integer) = :month
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsForItemInMonth(
+        title: String,
+        category: String,
+        type: String,
+        year: Int,
+        month: Int,
+    ): Flow<List<BudgetTransaction>>
+
+    @Query(
+        """
+        select * from transactions
+        where lower(ifnull(nullif(trim(title), ''), 'item')) = lower(:title)
+          and category = :category
+          and type = :type
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsForItemInYear(
+        title: String,
+        category: String,
+        type: String,
+        year: Int,
+    ): Flow<List<BudgetTransaction>>
+
     @Query("select * from transactions order by transactionDate desc, transactionId desc")
     suspend fun getAllTransactions(): List<BudgetTransaction>
 
