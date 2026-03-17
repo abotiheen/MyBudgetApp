@@ -16,6 +16,36 @@ class OfflineRepository(
     override suspend fun updateTransaction(transaction: BudgetTransaction) =
         transactionDao.updateTransaction(transaction)
 
+    override suspend fun updateTransactionCategoryForItemInMonth(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+        month: Int,
+    ) = transactionDao.updateTransactionCategoryForItemInMonth(
+        title = title,
+        oldCategory = oldCategory,
+        newCategory = newCategory,
+        type = type,
+        year = year,
+        month = month,
+    )
+
+    override suspend fun updateTransactionCategoryForItemInYear(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+    ) = transactionDao.updateTransactionCategoryForItemInYear(
+        title = title,
+        oldCategory = oldCategory,
+        newCategory = newCategory,
+        type = type,
+        year = year,
+    )
+
     override suspend fun deleteTransaction(transaction: BudgetTransaction) =
         transactionDao.deleteTransaction(transaction)
 

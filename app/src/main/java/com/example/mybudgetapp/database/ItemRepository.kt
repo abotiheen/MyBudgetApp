@@ -6,6 +6,21 @@ interface ItemRepository {
     suspend fun insertTransaction(transaction: BudgetTransaction): Long
     suspend fun insertTransactions(transactions: List<BudgetTransaction>)
     suspend fun updateTransaction(transaction: BudgetTransaction)
+    suspend fun updateTransactionCategoryForItemInMonth(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+        month: Int,
+    )
+    suspend fun updateTransactionCategoryForItemInYear(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+    )
     suspend fun deleteTransaction(transaction: BudgetTransaction)
     suspend fun deleteTransactionWithId(id: Long)
     suspend fun insertCategory(category: BudgetCategory)

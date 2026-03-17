@@ -19,6 +19,44 @@ interface TransactionDao {
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateTransaction(transaction: BudgetTransaction)
 
+    @Query(
+        """
+        update transactions
+        set category = :newCategory
+        where lower(ifnull(nullif(trim(title), ''), 'item')) = lower(:title)
+          and category = :oldCategory
+          and type = :type
+          and cast(strftime('%m', transactionDate) as integer) = :month
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        """
+    )
+    suspend fun updateTransactionCategoryForItemInMonth(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+        month: Int,
+    )
+
+    @Query(
+        """
+        update transactions
+        set category = :newCategory
+        where lower(ifnull(nullif(trim(title), ''), 'item')) = lower(:title)
+          and category = :oldCategory
+          and type = :type
+          and cast(strftime('%Y', transactionDate) as integer) = :year
+        """
+    )
+    suspend fun updateTransactionCategoryForItemInYear(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+    )
+
     @Delete
     suspend fun deleteTransaction(transaction: BudgetTransaction)
 
