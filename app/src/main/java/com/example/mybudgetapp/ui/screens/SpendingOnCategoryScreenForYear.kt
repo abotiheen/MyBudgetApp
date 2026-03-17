@@ -199,6 +199,7 @@ private fun SpendingOnCategoryYearBody(
                     deleteItem = { deleteItem(item.itemId) },
                     date = item.date,
                     imagePath = item.imagePath,
+                    accentColor = accent,
                     navigateToItemDates = {
                         navigateToItemDates(
                             item.name,

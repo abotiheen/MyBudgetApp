@@ -52,6 +52,7 @@ import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.SectionHeading
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object TotalIncomeDestinationForYear : NavigationDestination {
@@ -197,12 +198,18 @@ private fun TotalIncomeYearBody(
             }
         } else {
             items(items) { item ->
+                val itemAccent = if (uiState.isIncome) {
+                    BudgetTheme.extendedColors.income
+                } else {
+                    categoryAccentColor(item.categoryColorHex, item.category)
+                }
                 ItemCard(
                     title = item.name,
                     totalSpending = item.totalCost,
                     deleteItem = { deleteItem(item.itemId) },
                     date = item.date,
                     imagePath = item.imagePath,
+                    accentColor = itemAccent,
                     navigateToItemDates = {
                         navigateToItemDates(
                             item.name,

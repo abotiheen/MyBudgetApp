@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -146,6 +147,7 @@ fun ItemCard(
     title: String,
     totalSpending: String,
     iconPainter: Painter,
+    accentColor: Color,
     date: String,
     imagePath: String?,
     deleteItem: () -> Unit,
@@ -200,7 +202,7 @@ fun ItemCard(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f))
+                        .background(accentColor.copy(alpha = 0.14f))
                         .border(
                             width = 1.dp,
                             color = BudgetTheme.extendedColors.edge,
@@ -218,10 +220,10 @@ fun ItemCard(
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
-                        Image(
+                        Icon(
                             painter = iconPainter,
                             contentDescription = null,
-                            contentScale = ContentScale.Fit,
+                            tint = accentColor,
                         )
                     }
                 }
@@ -357,6 +359,7 @@ fun ItemCardForDates(
     modifier: Modifier = Modifier,
     title: String,
     iconPainter: Painter,
+    accentColor: Color,
     imagePath: String?,
 ) {
     Card(
@@ -378,7 +381,7 @@ fun ItemCardForDates(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f))
+                    .background(accentColor.copy(alpha = 0.14f))
                     .border(
                         width = 1.dp,
                         color = BudgetTheme.extendedColors.edge,
@@ -396,9 +399,10 @@ fun ItemCardForDates(
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    Image(
+                    Icon(
                         painter = iconPainter,
                         contentDescription = null,
+                        tint = accentColor,
                     )
                 }
             }

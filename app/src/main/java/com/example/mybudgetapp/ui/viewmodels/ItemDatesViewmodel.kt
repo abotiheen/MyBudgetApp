@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.TRANSACTION_TYPE_INCOME
@@ -64,7 +65,9 @@ class ItemDatesViewModel(
                 date = latestDate,
                 amount = formatCurrencyIraqiDinar(totalAmount),
                 typeLabel = if ((latestTransaction?.type ?: type) == TRANSACTION_TYPE_INCOME) "Income" else "Expense",
-                picturePath = latestTransaction?.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
+                picturePath = usableImagePath(
+                    latestTransaction?.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath }
+                ),
                 historyCount = history.size,
                 categoryIconKey = categoryDetails?.iconKey.orEmpty(),
                 categoryColorHex = categoryDetails?.colorHex.orEmpty(),

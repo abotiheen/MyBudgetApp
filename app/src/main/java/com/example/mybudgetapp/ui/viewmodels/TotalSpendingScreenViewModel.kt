@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.resolvedTransactionTitle
@@ -158,7 +159,9 @@ fun List<BudgetTransaction>.toGroupedSpendingItems(
             compareBy<BudgetTransaction> { it.transactionDate }.thenBy { it.transactionId }
         ) ?: transactions.first()
         SpendingItem(
-            imagePath = latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
+            imagePath = usableImagePath(
+                latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath }
+            ),
             name = resolvedTransactionTitle(latestTransaction.title, latestTransaction.category, latestTransaction.type),
             date = latestTransaction.transactionDate,
             totalCost = formatCompactCurrencyIraqiDinar(transactions.sumOf { it.amount }),
