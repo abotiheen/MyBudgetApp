@@ -273,7 +273,8 @@ fun DetailEntryRow(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.clickable(onClick = onOpen),
+        modifier = modifier,
+        onClick = onOpen,
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
         shadowElevation = BudgetTheme.elevations.level1,

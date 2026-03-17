@@ -31,11 +31,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -357,18 +357,19 @@ private fun ChangeCategoryBottomSheet(
                 val accent = categoryAccentColor(category.colorHex, category.categoryKey)
                 val isSelected = category.categoryKey == currentCategory
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !isSaving && !isSelected) {
-                            onSelectCategory(category.categoryKey)
-                        },
-                    color = if (isSelected) {
-                        accent.copy(alpha = 0.12f)
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    },
+                    onClick = { onSelectCategory(category.categoryKey) },
+                    enabled = !isSaving && !isSelected,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                    shadowElevation = BudgetTheme.elevations.level1,
+                    border = BorderStroke(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) {
+                            accent.copy(alpha = 0.42f)
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                        },
+                    ),
                 ) {
                     Row(
                         modifier = Modifier
@@ -378,7 +379,11 @@ private fun ChangeCategoryBottomSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Surface(
-                            color = accent.copy(alpha = 0.14f),
+                            color = if (isSelected) {
+                                accent.copy(alpha = 0.14f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+                            },
                             shape = RoundedCornerShape(BudgetTheme.radii.md),
                         ) {
                             Box(

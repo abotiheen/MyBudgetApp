@@ -657,7 +657,7 @@ private fun CompactCategoryChip(
     )
 
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         color = backgroundColor.value,
         shape = RoundedCornerShape(BudgetTheme.radii.pill),
         border = BorderStroke(
@@ -693,7 +693,7 @@ private fun UtilityActionChip(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         color = if (filled) tint.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(BudgetTheme.radii.pill),
         border = BorderStroke(
@@ -728,7 +728,7 @@ private fun TemplateShortcutChip(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         color = BudgetTheme.extendedColors.mist,
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),

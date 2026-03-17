@@ -267,8 +267,8 @@ private fun DashboardFlowChip(
 ) {
     Surface(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .fillMaxWidth(),
+        onClick = onClick,
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
     ) {
