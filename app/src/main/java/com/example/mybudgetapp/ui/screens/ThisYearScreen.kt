@@ -36,11 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
@@ -53,6 +51,7 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.DropDownItem
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 import java.time.Year
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,8 +65,10 @@ object ThisYearDestination : NavigationDestination {
 @Composable
 fun ThisYearScreen(
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
+    navigateToCategoryBreakdown: (Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToInsights: (Int) -> Unit,
+    navigateToCategories: () -> Unit,
 ) {
     val viewModel: ThisYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
@@ -105,8 +106,10 @@ fun ThisYearScreen(
                 onNextYear = viewModel::selectNextYear,
                 onOpenYearPicker = { isYearPickerVisible = true },
                 navigateToSpendingOnCategoryForYear = navigateToSpendingOnCategoryForYear,
+                navigateToCategoryBreakdown = navigateToCategoryBreakdown,
                 navigateToTotalIncomeForYear = navigateToTotalIncomeForYear,
                 navigateToInsights = navigateToInsights,
+                navigateToCategories = navigateToCategories,
             )
         }
 
@@ -142,15 +145,34 @@ fun ThisYearScreenBody(
     onNextYear: () -> Unit,
     onOpenYearPicker: () -> Unit,
     navigateToSpendingOnCategoryForYear: (String, Int) -> Unit,
+    navigateToCategoryBreakdown: (Int) -> Unit,
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToInsights: (Int) -> Unit,
+    navigateToCategories: () -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmountForYear - uiState.totalSpendingAmountForYear)
-    val totalSpending = uiState.totalSpendingAmountForYear.takeIf { it > 0 } ?: 1.0
     val topCategory = uiState.insights.getOrNull(0)
     val daysInYear = if (Year.isLeap(uiState.selectedYear.toLong())) 366.0 else 365.0
     val averageDaily = formatCompactCurrencyIraqiDinar(uiState.totalSpendingAmountForYear / daysInYear)
+    val topCategoryLanes = uiState.categoryTotals
+        .filter { it.total > 0 }
+        .take(3)
+        .map { category ->
+            DashboardLaneUi(
+                label = category.categoryLabel,
+                amount = formatCompactCurrencyIraqiDinar(category.total),
+                progress = if (uiState.totalSpendingAmountForYear > 0) {
+                    (category.total / uiState.totalSpendingAmountForYear).toFloat().coerceIn(0f, 1f)
+                } else {
+                    0f
+                },
+                accent = categoryAccentColor(category.colorHex, category.categoryKey),
+                iconKey = category.iconKey,
+                categoryKey = category.categoryKey,
+                onClick = { navigateToSpendingOnCategoryForYear(category.categoryKey, uiState.selectedYear) },
+            )
+        }
 
     LazyColumn(
         modifier = modifier,
@@ -222,31 +244,20 @@ fun ThisYearScreenBody(
         item {
             DashboardLanesCard(
                 title = "Spending categories",
-                subtitle = "The three category groups carrying the most weight this year.",
-                lanes = listOf(
-                    DashboardLaneUi(
-                        label = stringResource(id = SpendingCategoryDisplayObject.items[0].title),
-                        amount = uiState.totalSpendingOnFoodForYear,
-                        progress = (uiState.totalFoodAmountForYear / totalSpending).toFloat().coerceIn(0f, 1f),
-                        accent = BudgetTheme.extendedColors.food,
-                        icon = SpendingCategoryDisplayObject.items[0].spendingIcon,
-                        onClick = { navigateToSpendingOnCategoryForYear("food", uiState.selectedYear) },
+                subtitle = if (topCategoryLanes.isEmpty()) {
+                    "No category totals yet for this year."
+                } else {
+                    "The categories carrying the most weight this year, with a route into the full category library."
+                },
+                lanes = topCategoryLanes,
+                actions = listOf(
+                    DashboardCardAction(
+                        label = "View all",
+                        onClick = { navigateToCategoryBreakdown(uiState.selectedYear) },
                     ),
-                    DashboardLaneUi(
-                        label = stringResource(id = SpendingCategoryDisplayObject.items[1].title),
-                        amount = uiState.totalSpendingOnTransportationForYear,
-                        progress = (uiState.totalTransportationAmountForYear / totalSpending).toFloat().coerceIn(0f, 1f),
-                        accent = BudgetTheme.extendedColors.transit,
-                        icon = SpendingCategoryDisplayObject.items[1].spendingIcon,
-                        onClick = { navigateToSpendingOnCategoryForYear("transportation", uiState.selectedYear) },
-                    ),
-                    DashboardLaneUi(
-                        label = stringResource(id = SpendingCategoryDisplayObject.items[2].title),
-                        amount = uiState.totalSpendingOnOthersForYear,
-                        progress = (uiState.totalOthersAmountForYear / totalSpending).toFloat().coerceIn(0f, 1f),
-                        accent = BudgetTheme.extendedColors.others,
-                        icon = SpendingCategoryDisplayObject.items[2].spendingIcon,
-                        onClick = { navigateToSpendingOnCategoryForYear("others", uiState.selectedYear) },
+                    DashboardCardAction(
+                        label = "Manage",
+                        onClick = navigateToCategories,
                     ),
                 ),
             )

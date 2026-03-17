@@ -32,32 +32,46 @@ class TotalSpendingScreenForYearViewModel(
     ) { isIncome, isDeleteDialogVisible ->
         isIncome to isDeleteDialogVisible
     }
+    private val transactionContent = combine(
+        itemRepository.getTransactionsForYear(year = currentYear),
+        itemRepository.getTotalSpendingOverallForYear(year = currentYear),
+        itemRepository.getTotalIncomeOverallForYear(year = currentYear),
+        itemRepository.getIncomeTransactionsForYear(year = currentYear),
+        itemRepository.getAllCategories(includeArchived = true),
+    ) { spendingItems, totalSpending, totalIncome, incomeItems, categories ->
+        val categoryLookup = categories.associateBy { it.categoryKey }
+        YearSpendingContent(
+            totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
+            spendingItemList = spendingItems.toGroupedSpendingItems(
+                year = currentYear,
+                month = 0,
+                categoryLookup = categoryLookup,
+            ),
+            totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
+            incomeItemList = incomeItems.toGroupedSpendingItems(
+                year = currentYear,
+                month = 0,
+                categoryLookup = categoryLookup,
+            ),
+        )
+    }
 
     init {
         isThisYearCurrent = (date.year == currentYear)
     }
 
     val uiState: StateFlow<TotalSpendingUiState> = combine(
-        itemRepository.getTransactionsForYear(year = currentYear),
-        itemRepository.getTotalSpendingOverallForYear(year = currentYear),
-        itemRepository.getTotalIncomeOverallForYear(year = currentYear),
-        itemRepository.getIncomeTransactionsForYear(year = currentYear),
+        transactionContent,
         screenMeta,
-    ) { spendingItems, totalSpending, totalIncome, incomeItems, screenMeta ->
+    ) { content, screenMeta ->
         val (isIncome, isDeleteDialogVisible) = screenMeta
         TotalSpendingUiState(
-            totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
-            spendingItemList = spendingItems.toGroupedSpendingItems(
-                year = currentYear,
-                month = 0,
-            ),
+            totalSpending = content.totalSpending,
+            spendingItemList = content.spendingItemList,
             month = currentYear.toString(),
             isIncome = isIncome,
-            totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
-            incomeItemList = incomeItems.toGroupedSpendingItems(
-                year = currentYear,
-                month = 0,
-            ),
+            totalIncome = content.totalIncome,
+            incomeItemList = content.incomeItemList,
             isThisMonthCurrent = isThisYearCurrent,
             isDeleteDialogVisible = isDeleteDialogVisible
         )
@@ -85,3 +99,10 @@ class TotalSpendingScreenForYearViewModel(
         private const val TIMEOUT_MILLIS = 5_000L
     }
 }
+
+private data class YearSpendingContent(
+    val totalSpending: String,
+    val totalIncome: String,
+    val spendingItemList: List<SpendingItem>,
+    val incomeItemList: List<SpendingItem>,
+)

@@ -39,7 +39,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
@@ -53,6 +52,7 @@ import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.SectionHeading
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object TotalIncomeDestinationForYear : NavigationDestination {
     override val route = "TotalIncomeForYear"
@@ -212,12 +212,7 @@ private fun TotalIncomeYearBody(
                             item.month,
                         )
                     },
-                    displayItem = when (item.category) {
-                        "food" -> SpendingCategoryDisplayObject.items[0]
-                        "others" -> SpendingCategoryDisplayObject.items[2]
-                        "transportation" -> SpendingCategoryDisplayObject.items[1]
-                        else -> SpendingCategoryDisplayObject.items[3]
-                    },
+                    iconPainter = categoryIconPainter(item.categoryIconKey, item.category),
                 )
             }
         }

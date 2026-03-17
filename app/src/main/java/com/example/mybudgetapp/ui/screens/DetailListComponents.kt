@@ -30,8 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,7 +55,7 @@ fun DetailCollectionHero(
     subtitle: String,
     badgeLabel: String,
     accent: Color,
-    iconRes: Int,
+    iconPainter: Painter,
     chips: List<DetailHeroChipUi>,
     modifier: Modifier = Modifier,
 ) {
@@ -92,7 +92,7 @@ fun DetailCollectionHero(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            painter = painterResource(id = iconRes),
+                            painter = iconPainter,
                             contentDescription = null,
                             tint = accent,
                         )
@@ -215,7 +215,7 @@ fun DetailEmptyStateCard(
     title: String,
     message: String,
     accent: Color,
-    iconRes: Int,
+    iconPainter: Painter,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -238,7 +238,7 @@ fun DetailEmptyStateCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painter = painterResource(id = iconRes),
+                        painter = iconPainter,
                         contentDescription = null,
                         tint = accent,
                     )
@@ -266,7 +266,7 @@ fun DetailEntryRow(
     amount: String,
     meta: String,
     imagePath: String?,
-    iconRes: Int,
+    iconPainter: Painter,
     accent: Color,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
@@ -294,8 +294,8 @@ fun DetailEntryRow(
                         model = imagePath,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        placeholder = painterResource(id = iconRes),
-                        error = painterResource(id = iconRes),
+                        placeholder = iconPainter,
+                        error = iconPainter,
                         modifier = Modifier
                             .size(52.dp)
                             .clip(RoundedCornerShape(BudgetTheme.radii.md)),
@@ -306,7 +306,7 @@ fun DetailEntryRow(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            painter = painterResource(id = iconRes),
+                            painter = iconPainter,
                             contentDescription = null,
                             tint = accent,
                         )

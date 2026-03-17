@@ -70,6 +70,17 @@ object AppViewModelProvider {
                 this.createSavedStateHandle()
             )
         }
+        initializer {
+            CategoriesViewModel(
+                budgetApplication().container.itemRepository,
+            )
+        }
+        initializer {
+            CategoryBreakdownViewModel(
+                budgetApplication().container.itemRepository,
+                this.createSavedStateHandle(),
+            )
+        }
 
 
     }

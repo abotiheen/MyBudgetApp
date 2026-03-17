@@ -61,6 +61,7 @@ class ThisMonthScreenViewModel(
                 type = TRANSACTION_TYPE_EXPENSE,
                 year = period.year,
                 month = period.month,
+                includeArchived = true,
             ),
             itemRepository.getAllCategories(includeArchived = true),
         ) { totalSpending, totalIncome, categoryTotals, categories ->
@@ -117,10 +118,12 @@ class ThisMonthScreenViewModel(
                 ),
                 categoryTotals = totals.categoryTotals,
                 recentTransactions = transactions.take(4).map { transaction ->
+                    val categoryDetails = totals.categoryTotals.firstOrNull { it.categoryKey == transaction.category }
                     HomeTransactionPreview(
                         title = transaction.displayTitle(),
                         categoryKey = transaction.category,
                         category = categoryLabel(transaction.category, totals.categoryNames),
+                        categoryColorHex = categoryDetails?.colorHex.orEmpty(),
                         amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
                     )
@@ -227,6 +230,7 @@ data class HomeTransactionPreview(
     val title: String,
     val categoryKey: String,
     val category: String,
+    val categoryColorHex: String = "",
     val amount: String,
     val date: String,
 )

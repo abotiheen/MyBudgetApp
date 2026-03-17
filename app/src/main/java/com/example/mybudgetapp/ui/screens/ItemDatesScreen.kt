@@ -30,15 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
@@ -48,6 +47,8 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object ItemDatesScreenNavigationDestination : NavigationDestination {
     override val route = "ItemDates"
@@ -104,18 +105,7 @@ fun ItemDatesBody(
     uiState: ItemDatesUiState,
 ) {
     val spacing = BudgetTheme.spacing
-    val displayItem = when (uiState.category) {
-        "food" -> SpendingCategoryDisplayObject.items[0]
-        "others" -> SpendingCategoryDisplayObject.items[2]
-        "transportation" -> SpendingCategoryDisplayObject.items[1]
-        else -> SpendingCategoryDisplayObject.items[3]
-    }
-    val accent = when (uiState.category) {
-        "food" -> BudgetTheme.extendedColors.food
-        "others" -> BudgetTheme.extendedColors.others
-        "transportation" -> BudgetTheme.extendedColors.transit
-        else -> BudgetTheme.extendedColors.income
-    }
+    val accent = categoryAccentColor(uiState.categoryColorHex, uiState.category)
 
     LazyColumn(
         modifier = modifier,
@@ -134,7 +124,7 @@ fun ItemDatesBody(
                 typeLabel = uiState.typeLabel,
                 categoryLabel = uiState.categoryLabel,
                 imagePath = uiState.picturePath,
-                icon = displayItem.spendingIcon,
+                iconPainter = categoryIconPainter(uiState.categoryIconKey, uiState.category),
                 accent = accent,
             )
         }
@@ -179,7 +169,7 @@ private fun ItemDetailOverviewCard(
     typeLabel: String,
     categoryLabel: String,
     imagePath: String?,
-    icon: Int,
+    iconPainter: Painter,
     accent: Color,
 ) {
     Card(
@@ -216,7 +206,7 @@ private fun ItemDetailOverviewCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         androidx.compose.material3.Icon(
-                            painter = painterResource(id = icon),
+                            painter = iconPainter,
                             contentDescription = null,
                             tint = accent,
                         )
@@ -285,7 +275,7 @@ private fun ItemDetailOverviewCard(
                             contentAlignment = Alignment.Center,
                         ) {
                             androidx.compose.material3.Icon(
-                                painter = painterResource(id = icon),
+                                painter = iconPainter,
                                 contentDescription = null,
                                 tint = accent,
                             )

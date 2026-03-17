@@ -40,18 +40,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayData
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 
 @Composable
@@ -146,7 +145,7 @@ fun ItemCard(
     modifier: Modifier = Modifier,
     title: String,
     totalSpending: String,
-    displayItem: SpendingCategoryDisplayData,
+    iconPainter: Painter,
     date: String,
     imagePath: String?,
     deleteItem: () -> Unit,
@@ -213,14 +212,14 @@ fun ItemCard(
                         AsyncImage(
                             model = imagePath,
                             contentDescription = null,
-                            placeholder = painterResource(id = displayItem.spendingIcon),
-                            error = painterResource(id = displayItem.spendingIcon),
+                            placeholder = iconPainter,
+                            error = iconPainter,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
                         Image(
-                            painter = painterResource(id = displayItem.spendingIcon),
+                            painter = iconPainter,
                             contentDescription = null,
                             contentScale = ContentScale.Fit,
                         )
@@ -357,7 +356,7 @@ fun DateCard(
 fun ItemCardForDates(
     modifier: Modifier = Modifier,
     title: String,
-    displayItem: SpendingCategoryDisplayData,
+    iconPainter: Painter,
     imagePath: String?,
 ) {
     Card(
@@ -391,14 +390,14 @@ fun ItemCardForDates(
                     AsyncImage(
                         model = imagePath,
                         contentDescription = null,
-                        placeholder = painterResource(id = displayItem.spendingIcon),
-                        error = painterResource(id = displayItem.spendingIcon),
+                        placeholder = iconPainter,
+                        error = iconPainter,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
                     Image(
-                        painter = painterResource(id = displayItem.spendingIcon),
+                        painter = iconPainter,
                         contentDescription = null,
                     )
                 }

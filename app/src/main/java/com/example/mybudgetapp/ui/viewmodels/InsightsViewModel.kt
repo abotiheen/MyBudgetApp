@@ -28,7 +28,7 @@ class InsightsViewModel(
         val totalsFlow = combine(
             itemRepository.getTotalSpendingOverallForYear(year),
             itemRepository.getTotalSpendingOverallForYear(year - 1),
-            itemRepository.getCategoryTotalsByTypeForYear(TRANSACTION_TYPE_EXPENSE, year),
+            itemRepository.getCategoryTotalsByTypeForYear(TRANSACTION_TYPE_EXPENSE, year, includeArchived = true),
             itemRepository.getAllCategories(includeArchived = true),
         ) { totalSpending, previousYearTotal, categoryTotals, categories ->
             YearInsightTotals(
@@ -72,7 +72,7 @@ class InsightsViewModel(
         val totalsFlow = combine(
             itemRepository.getTotalSpendingOverall(year, selectedMonth),
             itemRepository.getTotalSpendingOverall(previousPeriod.year, previousPeriod.monthValue),
-            itemRepository.getCategoryTotalsByType(TRANSACTION_TYPE_EXPENSE, year, selectedMonth),
+            itemRepository.getCategoryTotalsByType(TRANSACTION_TYPE_EXPENSE, year, selectedMonth, includeArchived = true),
             itemRepository.getAllCategories(includeArchived = true),
         ) { totalSpending, previousMonthTotal, categoryTotals, categories ->
             MonthInsightTotals(

@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
@@ -59,6 +58,8 @@ import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object InsightsDestination : NavigationDestination {
     override val route = "Insights"
@@ -75,6 +76,7 @@ fun InsightsScreen(
     modifier: Modifier = Modifier,
     navigateBack: () -> Unit,
     navigateToSpendingOnCategory: (String) -> Unit,
+    navigateToCategories: () -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val viewModel: InsightsViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -96,6 +98,7 @@ fun InsightsScreen(
             InsightsBody(
                 uiState = uiState.value,
                 navigateToSpendingOnCategory = navigateToSpendingOnCategory,
+                navigateToCategories = navigateToCategories,
             )
         }
     }
@@ -106,6 +109,7 @@ private fun InsightsBody(
     modifier: Modifier = Modifier,
     uiState: InsightsUiState,
     navigateToSpendingOnCategory: (String) -> Unit,
+    navigateToCategories: () -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val allInsights = (uiState.overviewInsights + uiState.habitInsights)
@@ -174,6 +178,8 @@ private fun InsightsBody(
             InsightSectionHeader(
                 title = "Where It Went",
                 subtitle = "Category concentration matters more than raw counts when you want to adjust behavior.",
+                actionLabel = "Manage",
+                onAction = navigateToCategories,
             )
         }
         item {
@@ -283,7 +289,7 @@ private fun InsightsPulseHero(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = topCategory?.let { categoryLabel(it.category) } ?: "No category yet",
+                                text = topCategory?.label ?: "No category yet",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -439,12 +445,7 @@ private fun CategoryFocusCard(
     topShare: Float,
     transactionInsight: StatInsightUi?,
 ) {
-    val accent = when (topCategory?.category) {
-        "food" -> BudgetTheme.extendedColors.food
-        "transportation" -> BudgetTheme.extendedColors.transit
-        "others" -> BudgetTheme.extendedColors.others
-        else -> MaterialTheme.colorScheme.primary
-    }
+    val accent = categoryAccentColor(topCategory?.colorHex.orEmpty(), topCategory?.category.orEmpty())
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -468,7 +469,7 @@ private fun CategoryFocusCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = topCategory?.let { categoryLabel(it.category) } ?: "None",
+                        text = topCategory?.label ?: "None",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -526,16 +527,8 @@ private fun CategoryBreakdownRow(
     totalSpendingAmount: Double,
     onClick: () -> Unit,
 ) {
-    val display = when (category.category) {
-        "food" -> SpendingCategoryDisplayObject.items[0]
-        "transportation" -> SpendingCategoryDisplayObject.items[1]
-        else -> SpendingCategoryDisplayObject.items[2]
-    }
-    val accent = when (category.category) {
-        "food" -> BudgetTheme.extendedColors.food
-        "transportation" -> BudgetTheme.extendedColors.transit
-        else -> BudgetTheme.extendedColors.others
-    }
+    val accent = categoryAccentColor(category.colorHex, category.category)
+    val iconPainter = categoryIconPainter(category.iconKey, category.category)
     val progress = if (totalSpendingAmount > 0) {
         (category.total / totalSpendingAmount).toFloat().coerceIn(0f, 1f)
     } else {
@@ -571,7 +564,7 @@ private fun CategoryBreakdownRow(
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                painter = painterResource(id = display.spendingIcon),
+                                painter = iconPainter,
                                 contentDescription = null,
                                 tint = accent,
                             )
@@ -579,7 +572,7 @@ private fun CategoryBreakdownRow(
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = categoryLabel(category.category),
+                            text = category.label,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -629,21 +622,37 @@ private fun CategoryBreakdownRow(
 private fun InsightSectionHeader(
     title: String,
     subtitle: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (actionLabel != null && onAction != null) {
+            Text(
+                text = actionLabel,
+                modifier = Modifier.clickable(onClick = onAction),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 
@@ -704,7 +713,7 @@ private fun buildSummaryLine(
     comparison: String,
     topCategory: CategoryTotalUi?,
 ): String {
-    val categoryPart = topCategory?.let { categoryLabel(it.category) } ?: "your categories"
+    val categoryPart = topCategory?.label ?: "your categories"
     return when {
         comparison.isBlank() && scope == InsightScope.Month ->
             "This month is still forming. Watch $categoryPart to see where spending starts to collect."

@@ -33,7 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
@@ -44,6 +43,8 @@ import com.example.mybudgetapp.ui.widgets.AnimatedSegmentedControl
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object TotalIncomeDestination : NavigationDestination {
     override val route = "TotalIncome"
@@ -124,7 +125,10 @@ fun TotalIncomeBody(
     val accent = if (uiState.isIncome) BudgetTheme.extendedColors.income else BudgetTheme.extendedColors.danger
     val totalValue = if (uiState.isIncome) uiState.totalIncome else uiState.totalSpending
     val largestTransaction = items.maxByOrNull { it.amountValue }?.totalCost ?: totalValue
-    val heroIcon = if (uiState.isIncome) R.drawable.baseline_attach_money_24 else R.drawable.baseline_money_off_24
+    val heroIconPainter = categoryIconPainter(
+        iconKey = if (uiState.isIncome) "attach_money" else "money_off",
+        fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
+    )
 
     LazyColumn(
         modifier = modifier,
@@ -154,7 +158,7 @@ fun TotalIncomeBody(
                 },
                 badgeLabel = if (uiState.isThisMonthCurrent) "Live month" else "Archived",
                 accent = accent,
-                iconRes = heroIcon,
+                iconPainter = heroIconPainter,
                 chips = listOf(
                     DetailHeroChipUi("Entries", items.size.toString()),
                     DetailHeroChipUi("Largest", largestTransaction, isMonetary = true),
@@ -181,7 +185,7 @@ fun TotalIncomeBody(
                         "Expense records will show up here as soon as you add them."
                     },
                     accent = accent,
-                    iconRes = heroIcon,
+                    iconPainter = heroIconPainter,
                 )
             }
         } else {
@@ -189,7 +193,6 @@ fun TotalIncomeBody(
                 TransactionEntryRow(
                     item = item,
                     isIncome = uiState.isIncome,
-                    accent = accent,
                     onDelete = { deleteItem(item.itemId) },
                     onOpen = {
                         navigateToItemDates(
@@ -234,15 +237,13 @@ private fun TransactionTypeSwitch(
 private fun TransactionEntryRow(
     item: SpendingItem,
     isIncome: Boolean,
-    accent: Color,
     onDelete: () -> Unit,
     onOpen: () -> Unit,
 ) {
-    val categoryDisplay = when (item.category) {
-        "food" -> SpendingCategoryDisplayObject.items[0]
-        "others" -> SpendingCategoryDisplayObject.items[2]
-        "transportation" -> SpendingCategoryDisplayObject.items[1]
-        else -> SpendingCategoryDisplayObject.items[3]
+    val accent = if (isIncome) {
+        BudgetTheme.extendedColors.income
+    } else {
+        categoryAccentColor(item.categoryColorHex, item.category)
     }
 
     DetailEntryRow(
@@ -251,10 +252,10 @@ private fun TransactionEntryRow(
         meta = if (isIncome) {
             "Income • ${item.date}"
         } else {
-            "${item.category.replaceFirstChar { it.uppercase() }} • ${item.date}"
+            "${item.categoryLabel} • ${item.date}"
         },
         imagePath = item.imagePath,
-        iconRes = categoryDisplay.spendingIcon,
+        iconPainter = categoryIconPainter(item.categoryIconKey, item.category),
         accent = accent,
         onOpen = onOpen,
         onDelete = onDelete,
