@@ -12,6 +12,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.mybudgetapp.ui.screens.AddingItem
 import com.example.mybudgetapp.ui.screens.AddingItemDestination
+import com.example.mybudgetapp.ui.screens.CategoryBreakdownDestination
+import com.example.mybudgetapp.ui.screens.CategoryBreakdownScreen
+import com.example.mybudgetapp.ui.screens.CategoriesDestination
+import com.example.mybudgetapp.ui.screens.CategoriesScreen
 import com.example.mybudgetapp.ui.screens.CloudBackupDestination
 import com.example.mybudgetapp.ui.screens.CloudBackupScreen
 import com.example.mybudgetapp.ui.screens.ItemDatesScreen
@@ -60,6 +64,11 @@ fun AppNavHost (
                         "${SpendingOnCategoryDestination.route}/$category/$month/$year"
                     )
                                                },
+                navigateToCategoryBreakdown = { year, month ->
+                    navController.navigate(
+                        "${CategoryBreakdownDestination.route}/month/$year/$month"
+                    )
+                },
                 navigateToTotalIncome = { month, year, isIncome ->
                     navController.navigate(
                         "${TotalIncomeDestination.route}/$month/$year/$isIncome"
@@ -69,7 +78,10 @@ fun AppNavHost (
                     navController.navigate(
                         "${InsightsDestination.route}/month/$year/$month"
                     )
-                }
+                },
+                navigateToCategories = {
+                    navController.navigate(CategoriesDestination.route)
+                },
             )
         }
 
@@ -85,15 +97,63 @@ fun AppNavHost (
                         "${SpendingOnCategoryForYearDestination.route}/$category/$year"
                     )
                 },
+                navigateToCategoryBreakdown = { year ->
+                    navController.navigate(
+                        "${CategoryBreakdownDestination.route}/year/$year/0"
+                    )
+                },
                 navigateToTotalIncomeForYear = { year, isIncome ->
                     navController.navigate(
                         "${TotalIncomeDestinationForYear.route}/$year/$isIncome"
                     )
-                }
+                },
+                navigateToCategories = {
+                    navController.navigate(CategoriesDestination.route)
+                },
             )
         }
         composable(CloudBackupDestination.route) {
             CloudBackupScreen()
+        }
+        composable(CategoriesDestination.route) {
+            CategoriesScreen(
+                navigateBack = { navController.navigateUp() }
+            )
+        }
+        composable(
+            route = CategoryBreakdownDestination.routeWithArgs,
+            arguments = listOf(
+                navArgument(CategoryBreakdownDestination.scope) {
+                    type = NavType.StringType
+                },
+                navArgument(CategoryBreakdownDestination.year) {
+                    type = NavType.IntType
+                },
+                navArgument(CategoryBreakdownDestination.month) {
+                    type = NavType.IntType
+                },
+            )
+        ) { backStackEntry ->
+            val scope = checkNotNull(backStackEntry.arguments?.getString(CategoryBreakdownDestination.scope))
+            val year = checkNotNull(backStackEntry.arguments?.getInt(CategoryBreakdownDestination.year))
+            val month = checkNotNull(backStackEntry.arguments?.getInt(CategoryBreakdownDestination.month))
+            CategoryBreakdownScreen(
+                navigateBack = { navController.navigateUp() },
+                navigateToCategories = {
+                    navController.navigate(CategoriesDestination.route)
+                },
+                navigateToSpendingOnCategory = { category ->
+                    if (scope == "year") {
+                        navController.navigate(
+                            "${SpendingOnCategoryForYearDestination.route}/$category/$year"
+                        )
+                    } else {
+                        navController.navigate(
+                            "${SpendingOnCategoryDestination.route}/$category/$month/$year"
+                        )
+                    }
+                },
+            )
         }
         composable(
             route = InsightsDestination.routeWithArgs,
@@ -124,7 +184,10 @@ fun AppNavHost (
                             "${SpendingOnCategoryDestination.route}/$category/$month/$year"
                         )
                     }
-                }
+                },
+                navigateToCategories = {
+                    navController.navigate(CategoriesDestination.route)
+                },
             )
         }
         composable(

@@ -7,6 +7,10 @@ import kotlinx.serialization.Serializable
 const val TRANSACTION_TYPE_EXPENSE = "expense"
 const val TRANSACTION_TYPE_INCOME = "income"
 const val DEFAULT_TRANSACTION_TITLE = "item"
+const val CATEGORY_KEY_FOOD = "food"
+const val CATEGORY_KEY_TRANSPORTATION = "transportation"
+const val CATEGORY_KEY_OTHERS = "others"
+const val CATEGORY_KEY_INCOME = "income"
 
 @Serializable
 @Entity(tableName = "transactions")
@@ -19,6 +23,20 @@ data class BudgetTransaction(
     val type: String,
     val transactionDate: String,
     val picturePath: String? = null,
+)
+
+@Serializable
+@Entity(tableName = "categories")
+data class BudgetCategory(
+    @PrimaryKey
+    val categoryKey: String,
+    val name: String,
+    val type: String,
+    val iconKey: String,
+    val colorHex: String,
+    val isDefault: Boolean = false,
+    val isArchived: Boolean = false,
+    val sortOrder: Int = 0,
 )
 
 @Serializable
@@ -44,6 +62,17 @@ data class MonthlySpendingTotal(
     val total: Double,
 )
 
+data class CategorySpendingTotal(
+    val categoryKey: String,
+    val categoryName: String,
+    val type: String,
+    val iconKey: String,
+    val colorHex: String,
+    val isArchived: Boolean,
+    val sortOrder: Int,
+    val total: Double,
+)
+
 fun BudgetTransaction.displayTitle(): String {
     return resolvedTransactionTitle(title, category, type)
 }
@@ -52,3 +81,42 @@ fun resolvedTransactionTitle(title: String?, category: String, type: String): St
     title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
 
 fun defaultTransactionTitle(category: String, type: String): String = DEFAULT_TRANSACTION_TITLE
+
+fun defaultBudgetCategories(): List<BudgetCategory> = listOf(
+    BudgetCategory(
+        categoryKey = CATEGORY_KEY_FOOD,
+        name = "Food",
+        type = TRANSACTION_TYPE_EXPENSE,
+        iconKey = "fastfood",
+        colorHex = "#5EBB4A",
+        isDefault = true,
+        sortOrder = 0,
+    ),
+    BudgetCategory(
+        categoryKey = CATEGORY_KEY_TRANSPORTATION,
+        name = "Transportation",
+        type = TRANSACTION_TYPE_EXPENSE,
+        iconKey = "directions_transit",
+        colorHex = "#2D9CDB",
+        isDefault = true,
+        sortOrder = 1,
+    ),
+    BudgetCategory(
+        categoryKey = CATEGORY_KEY_OTHERS,
+        name = "Others",
+        type = TRANSACTION_TYPE_EXPENSE,
+        iconKey = "cookie",
+        colorHex = "#9AAF47",
+        isDefault = true,
+        sortOrder = 2,
+    ),
+    BudgetCategory(
+        categoryKey = CATEGORY_KEY_INCOME,
+        name = "Income",
+        type = TRANSACTION_TYPE_INCOME,
+        iconKey = "attach_money",
+        colorHex = "#4FAF33",
+        isDefault = true,
+        sortOrder = 3,
+    ),
+)

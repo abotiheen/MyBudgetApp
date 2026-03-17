@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.resolvedTransactionTitle
@@ -42,8 +43,9 @@ class SpendingOnCategoryScreenViewModel(
         itemRepository.getTotalSpendingOverall(
             month = currentMonthValue,
             year = currentYear,
-        )
-    ) { itemList, totalCategory, totalSpending ->
+        ),
+        itemRepository.getCategory(category),
+    ) { itemList, totalCategory, totalSpending, categoryDetails ->
         val mappedItems = itemList.toGroupedSpendingOnCategoryItems(
             year = currentYear,
             month = currentMonthValue,
@@ -56,13 +58,15 @@ class SpendingOnCategoryScreenViewModel(
             spendingRatio = if (totalSpending == 0.0) 0f else totalCategory.toFloat() / totalSpending.toFloat(),
             itemList = mappedItems,
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
-            category = category.capitalized(),
+            category = categoryDetails?.name ?: category.capitalized(),
             sentCategory = category,
             periodLabel = "${Month.of(currentMonthValue).name.capitalized()} $currentYear",
             transactionCount = mappedItems.size,
             averageTransaction = formatCompactCurrencyIraqiDinar(averageAmount),
             biggestTransaction = formatCompactCurrencyIraqiDinar(biggestAmount),
             isDeleteDialogVisible = isDeleteDialogVisible.value,
+            categoryIconKey = categoryDetails?.iconKey.orEmpty(),
+            categoryColorHex = categoryDetails?.colorHex.orEmpty(),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -98,7 +102,9 @@ data class SpendingOnCategoryUiState(
     val transactionCount: Int = 0,
     val averageTransaction: String = "",
     val biggestTransaction: String = "",
-    val itemList: List<SpendingOnCategoryItem> = listOf()
+    val itemList: List<SpendingOnCategoryItem> = listOf(),
+    val categoryIconKey: String = "",
+    val categoryColorHex: String = "",
 )
 
 data class SpendingOnCategoryItem(
@@ -128,7 +134,9 @@ fun List<BudgetTransaction>.toGroupedSpendingOnCategoryItems(
         ) ?: transactions.first()
         SpendingOnCategoryItem(
             itemId = latestTransaction.transactionId,
-            imagePath = latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
+            imagePath = usableImagePath(
+                latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath }
+            ),
             name = resolvedTransactionTitle(latestTransaction.title, latestTransaction.category, latestTransaction.type),
             date = latestTransaction.transactionDate,
             totalCost = formatCompactCurrencyIraqiDinar(transactions.sumOf { it.amount }),

@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 
 class OfflineRepository(
     private val transactionDao: TransactionDao,
+    private val categoryDao: CategoryDao,
 ) : ItemRepository {
 
     override suspend fun insertTransaction(transaction: BudgetTransaction): Long =
@@ -15,14 +16,89 @@ class OfflineRepository(
     override suspend fun updateTransaction(transaction: BudgetTransaction) =
         transactionDao.updateTransaction(transaction)
 
+    override suspend fun updateTransactionCategoryForItemInMonth(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+        month: Int,
+    ) = transactionDao.updateTransactionCategoryForItemInMonth(
+        title = title,
+        oldCategory = oldCategory,
+        newCategory = newCategory,
+        type = type,
+        year = year,
+        month = month,
+    )
+
+    override suspend fun updateTransactionCategoryForItemInYear(
+        title: String,
+        oldCategory: String,
+        newCategory: String,
+        type: String,
+        year: Int,
+    ) = transactionDao.updateTransactionCategoryForItemInYear(
+        title = title,
+        oldCategory = oldCategory,
+        newCategory = newCategory,
+        type = type,
+        year = year,
+    )
+
     override suspend fun deleteTransaction(transaction: BudgetTransaction) =
         transactionDao.deleteTransaction(transaction)
 
     override suspend fun deleteTransactionWithId(id: Long) =
         transactionDao.deleteTransactionWithId(id)
 
+    override suspend fun insertCategory(category: BudgetCategory) =
+        categoryDao.insertCategory(category)
+
+    override suspend fun insertCategories(categories: List<BudgetCategory>) =
+        categoryDao.insertCategories(categories)
+
+    override suspend fun updateCategory(category: BudgetCategory) =
+        categoryDao.updateCategory(category)
+
+    override suspend fun archiveCategory(categoryKey: String) =
+        categoryDao.archiveCategory(categoryKey)
+
     override fun getTransaction(id: Long): Flow<BudgetTransaction> =
         transactionDao.getTransaction(id)
+
+    override fun getAllCategories(includeArchived: Boolean): Flow<List<BudgetCategory>> =
+        categoryDao.getAllCategories(includeArchived)
+
+    override fun getCategoriesByType(type: String, includeArchived: Boolean): Flow<List<BudgetCategory>> =
+        categoryDao.getCategoriesByType(type, includeArchived)
+
+    override fun getCategory(categoryKey: String): Flow<BudgetCategory?> =
+        categoryDao.getCategory(categoryKey)
+
+    override fun getCategoryTotalsByType(
+        type: String,
+        year: Int,
+        month: Int,
+        includeArchived: Boolean,
+    ): Flow<List<CategorySpendingTotal>> =
+        categoryDao.getCategoryTotalsByType(
+            type = type,
+            year = year,
+            month = month,
+            includeArchived = includeArchived,
+        )
+
+    override fun getCategoryTotalsByTypeForYear(
+        type: String,
+        year: Int,
+        includeArchived: Boolean,
+    ): Flow<List<CategorySpendingTotal>> =
+        categoryDao.getCategoryTotalsByTypeForYear(
+            type = type,
+            year = year,
+            includeArchived = includeArchived,
+        )
 
     override fun getTransactionsForItemInMonth(
         title: String,

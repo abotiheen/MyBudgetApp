@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,18 +41,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayData
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 
 @Composable
@@ -146,7 +146,8 @@ fun ItemCard(
     modifier: Modifier = Modifier,
     title: String,
     totalSpending: String,
-    displayItem: SpendingCategoryDisplayData,
+    iconPainter: Painter,
+    accentColor: Color,
     date: String,
     imagePath: String?,
     deleteItem: () -> Unit,
@@ -201,7 +202,7 @@ fun ItemCard(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f))
+                        .background(accentColor.copy(alpha = 0.14f))
                         .border(
                             width = 1.dp,
                             color = BudgetTheme.extendedColors.edge,
@@ -213,16 +214,16 @@ fun ItemCard(
                         AsyncImage(
                             model = imagePath,
                             contentDescription = null,
-                            placeholder = painterResource(id = displayItem.spendingIcon),
-                            error = painterResource(id = displayItem.spendingIcon),
+                            placeholder = iconPainter,
+                            error = iconPainter,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
-                        Image(
-                            painter = painterResource(id = displayItem.spendingIcon),
+                        Icon(
+                            painter = iconPainter,
                             contentDescription = null,
-                            contentScale = ContentScale.Fit,
+                            tint = accentColor,
                         )
                     }
                 }
@@ -357,7 +358,8 @@ fun DateCard(
 fun ItemCardForDates(
     modifier: Modifier = Modifier,
     title: String,
-    displayItem: SpendingCategoryDisplayData,
+    iconPainter: Painter,
+    accentColor: Color,
     imagePath: String?,
 ) {
     Card(
@@ -379,7 +381,7 @@ fun ItemCardForDates(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f))
+                    .background(accentColor.copy(alpha = 0.14f))
                     .border(
                         width = 1.dp,
                         color = BudgetTheme.extendedColors.edge,
@@ -391,15 +393,16 @@ fun ItemCardForDates(
                     AsyncImage(
                         model = imagePath,
                         contentDescription = null,
-                        placeholder = painterResource(id = displayItem.spendingIcon),
-                        error = painterResource(id = displayItem.spendingIcon),
+                        placeholder = iconPainter,
+                        error = iconPainter,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    Image(
-                        painter = painterResource(id = displayItem.spendingIcon),
+                    Icon(
+                        painter = iconPainter,
                         contentDescription = null,
+                        tint = accentColor,
                     )
                 }
             }

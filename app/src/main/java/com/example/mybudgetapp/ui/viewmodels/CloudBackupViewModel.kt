@@ -5,7 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.cloud.CloudAuthRepository
 import com.example.mybudgetapp.cloud.CloudBackupConfig
 import com.example.mybudgetapp.cloud.CloudBackupRepository
+import com.example.mybudgetapp.cloud.LocalJsonBackupRepository
+import com.example.mybudgetapp.cloud.LocalSpreadsheetExportRepository
 import com.example.mybudgetapp.cloud.UserSession
+import android.net.Uri
+import com.example.mybudgetapp.ui.theme.AppThemeMode
+import com.example.mybudgetapp.ui.theme.ThemePreferenceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +21,9 @@ import kotlinx.coroutines.launch
 class CloudBackupViewModel(
     private val authRepository: CloudAuthRepository,
     private val backupRepository: CloudBackupRepository,
+    private val spreadsheetExportRepository: LocalSpreadsheetExportRepository,
+    private val jsonBackupRepository: LocalJsonBackupRepository,
+    private val themePreferenceRepository: ThemePreferenceRepository,
 ) : ViewModel() {
     private val isBusy = MutableStateFlow(false)
     private val statusMessage = MutableStateFlow<String?>(null)
@@ -36,7 +44,8 @@ class CloudBackupViewModel(
         isBusy,
         statusMessage,
         statusFlow,
-    ) { session: UserSession?, busy: Boolean, message: String?, status: Triple<String?, String?, String?> ->
+        themePreferenceRepository.themeMode,
+    ) { session: UserSession?, busy: Boolean, message: String?, status: Triple<String?, String?, String?>, themeMode: AppThemeMode ->
         CloudBackupUiState(
             isConfigured = CloudBackupConfig.isConfigured,
             canDeleteAccount = CloudBackupConfig.canDeleteAccount,
@@ -47,6 +56,7 @@ class CloudBackupViewModel(
             remoteBackupAt = status.first,
             lastUploadedAt = status.second,
             lastRestoredAt = status.third,
+            themeMode = themeMode,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -118,6 +128,57 @@ class CloudBackupViewModel(
         })
     }
 
+    fun exportSpreadsheet() {
+        viewModelScope.launch {
+            isBusy.value = true
+            statusMessage.value = null
+            spreadsheetExportRepository.exportSpreadsheet()
+                .onSuccess { message ->
+                    statusMessage.value = message
+                }
+                .onFailure { error ->
+                    statusMessage.value = error.message
+                }
+            isBusy.value = false
+        }
+    }
+
+    fun exportJsonBackup() {
+        viewModelScope.launch {
+            isBusy.value = true
+            statusMessage.value = null
+            jsonBackupRepository.exportJsonBackup()
+                .onSuccess { message ->
+                    statusMessage.value = message
+                }
+                .onFailure { error ->
+                    statusMessage.value = error.message
+                }
+            isBusy.value = false
+        }
+    }
+
+    fun restoreJsonBackup(uri: Uri) {
+        viewModelScope.launch {
+            isBusy.value = true
+            statusMessage.value = null
+            jsonBackupRepository.restoreJsonBackup(uri)
+                .onSuccess { message ->
+                    statusMessage.value = message
+                }
+                .onFailure { error ->
+                    statusMessage.value = error.message
+                }
+            isBusy.value = false
+        }
+    }
+
+    fun selectDarkMode(isDark: Boolean) {
+        themePreferenceRepository.setThemeMode(
+            if (isDark) AppThemeMode.Dark else AppThemeMode.Light
+        )
+    }
+
     fun refreshStatus() {
         if (!CloudBackupConfig.isConfigured) {
             return
@@ -171,4 +232,5 @@ data class CloudBackupUiState(
     val remoteBackupAt: String? = null,
     val lastUploadedAt: String? = null,
     val lastRestoredAt: String? = null,
+    val themeMode: AppThemeMode = AppThemeMode.System,
 )

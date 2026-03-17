@@ -33,14 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
@@ -52,6 +51,8 @@ import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SectionHeading
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object SpendingOnCategoryForYearDestination : NavigationDestination {
     override val route = "SpendingOnCategory"
@@ -73,7 +74,7 @@ fun SpendingOnCategoryScreenForYear(
     val viewModel: SpendingOnCategoryForYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val categoryLabel = compactCategoryLabel(uiState.value.sentCategory, uiState.value.category)
+    val categoryLabel = uiState.value.category
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -126,17 +127,9 @@ private fun SpendingOnCategoryYearBody(
     navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
-    val categoryLabel = compactCategoryLabel(uiState.sentCategory, uiState.category)
-    val categoryDisplay = when (uiState.sentCategory) {
-        "food" -> SpendingCategoryDisplayObject.items[0]
-        "others" -> SpendingCategoryDisplayObject.items[2]
-        else -> SpendingCategoryDisplayObject.items[1]
-    }
-    val accent = when (uiState.sentCategory) {
-        "food" -> BudgetTheme.extendedColors.food
-        "others" -> BudgetTheme.extendedColors.others
-        else -> BudgetTheme.extendedColors.transit
-    }
+    val categoryLabel = uiState.category
+    val accent = categoryAccentColor(uiState.categoryColorHex, uiState.sentCategory)
+    val iconPainter = categoryIconPainter(uiState.categoryIconKey, uiState.sentCategory)
 
     LazyColumn(
         modifier = modifier,
@@ -155,7 +148,7 @@ private fun SpendingOnCategoryYearBody(
                 totalCategory = uiState.totalCategory,
                 totalSpending = uiState.totalSpending,
                 spendingRatio = uiState.spendingRatio,
-                icon = categoryDisplay.spendingIcon,
+                iconPainter = iconPainter,
                 accent = accent,
             )
         }
@@ -206,6 +199,7 @@ private fun SpendingOnCategoryYearBody(
                     deleteItem = { deleteItem(item.itemId) },
                     date = item.date,
                     imagePath = item.imagePath,
+                    accentColor = accent,
                     navigateToItemDates = {
                         navigateToItemDates(
                             item.name,
@@ -215,16 +209,11 @@ private fun SpendingOnCategoryYearBody(
                             item.month,
                         )
                     },
-                    displayItem = categoryDisplay,
+                    iconPainter = iconPainter,
                 )
             }
         }
     }
-}
-
-private fun compactCategoryLabel(categoryKey: String, fallback: String): String = when (categoryKey) {
-    "transportation" -> "Transit"
-    else -> fallback
 }
 
 @Composable
@@ -234,7 +223,7 @@ private fun YearCategorySnapshotCard(
     totalCategory: String,
     totalSpending: String,
     spendingRatio: Float,
-    icon: Int,
+    iconPainter: Painter,
     accent: Color,
 ) {
     Card(
@@ -277,7 +266,7 @@ private fun YearCategorySnapshotCard(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    painter = painterResource(id = icon),
+                                    painter = iconPainter,
                                     contentDescription = null,
                                     tint = accent,
                                 )

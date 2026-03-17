@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.resolvedTransactionTitle
@@ -36,28 +37,42 @@ class TotalSpendingScreenViewModel(
     ) { isIncome, isDeleteDialogVisible ->
         isIncome to isDeleteDialogVisible
     }
-
-    val uiState: StateFlow<TotalSpendingUiState> = combine(
+    private val transactionContent = combine(
         itemRepository.getTransactions(month = currentMonthValue, year = currentYear),
         itemRepository.getTotalSpendingOverall(year = currentYear, month = currentMonthValue),
         itemRepository.getTotalIncomeOverall(year = currentYear, month = currentMonthValue),
         itemRepository.getIncomeTransactions(year = currentYear, month = currentMonthValue),
-        screenMeta,
-    ) { spendingItems, totalSpending, totalIncome, incomeItems, screenMeta ->
-        val (isIncome, isDeleteDialogVisible) = screenMeta
-        TotalSpendingUiState(
+        itemRepository.getAllCategories(includeArchived = true),
+    ) { spendingItems, totalSpending, totalIncome, incomeItems, categories ->
+        val categoryLookup = categories.associateBy { it.categoryKey }
+        TotalSpendingContent(
             totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
             spendingItemList = spendingItems.toGroupedSpendingItems(
                 year = currentYear,
                 month = currentMonthValue,
+                categoryLookup = categoryLookup,
             ),
-            month = "${Month.of(currentMonthValue).toString().capitalized()} $currentYear",
-            isIncome = isIncome,
             totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
             incomeItemList = incomeItems.toGroupedSpendingItems(
                 year = currentYear,
                 month = currentMonthValue,
+                categoryLookup = categoryLookup,
             ),
+        )
+    }
+
+    val uiState: StateFlow<TotalSpendingUiState> = combine(
+        transactionContent,
+        screenMeta,
+    ) { content, screenMeta ->
+        val (isIncome, isDeleteDialogVisible) = screenMeta
+        TotalSpendingUiState(
+            totalSpending = content.totalSpending,
+            spendingItemList = content.spendingItemList,
+            month = "${Month.of(currentMonthValue).toString().capitalized()} $currentYear",
+            isIncome = isIncome,
+            totalIncome = content.totalIncome,
+            incomeItemList = content.incomeItemList,
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
             isDeleteDialogVisible = isDeleteDialogVisible
         )
@@ -105,6 +120,9 @@ data class SpendingItem(
     val amountValue: Double = 0.0,
     val type: String = "",
     val category: String = "",
+    val categoryLabel: String = "",
+    val categoryIconKey: String = "",
+    val categoryColorHex: String = "",
     val itemId: Long = 0,
     val year: Int = 0,
     val month: Int = 0,
@@ -116,9 +134,17 @@ private data class SpendingItemGroupKey(
     val type: String,
 )
 
+private data class TotalSpendingContent(
+    val totalSpending: String,
+    val totalIncome: String,
+    val spendingItemList: List<SpendingItem>,
+    val incomeItemList: List<SpendingItem>,
+)
+
 fun List<BudgetTransaction>.toGroupedSpendingItems(
     year: Int,
     month: Int,
+    categoryLookup: Map<String, com.example.mybudgetapp.database.BudgetCategory>,
 ): List<SpendingItem> = this
     .groupBy { transaction ->
         SpendingItemGroupKey(
@@ -133,13 +159,18 @@ fun List<BudgetTransaction>.toGroupedSpendingItems(
             compareBy<BudgetTransaction> { it.transactionDate }.thenBy { it.transactionId }
         ) ?: transactions.first()
         SpendingItem(
-            imagePath = latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
+            imagePath = usableImagePath(
+                latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath }
+            ),
             name = resolvedTransactionTitle(latestTransaction.title, latestTransaction.category, latestTransaction.type),
             date = latestTransaction.transactionDate,
             totalCost = formatCompactCurrencyIraqiDinar(transactions.sumOf { it.amount }),
             amountValue = transactions.sumOf { it.amount },
             type = latestTransaction.type,
             category = latestTransaction.category,
+            categoryLabel = categoryLookup[latestTransaction.category]?.name ?: latestTransaction.category.capitalized(),
+            categoryIconKey = categoryLookup[latestTransaction.category]?.iconKey.orEmpty(),
+            categoryColorHex = categoryLookup[latestTransaction.category]?.colorHex.orEmpty(),
             itemId = latestTransaction.transactionId,
             year = year,
             month = month,

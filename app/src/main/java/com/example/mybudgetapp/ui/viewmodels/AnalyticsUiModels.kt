@@ -5,6 +5,7 @@ import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
+import com.example.mybudgetapp.database.CategorySpendingTotal
 import java.time.Month
 import java.time.YearMonth
 import kotlin.math.abs
@@ -33,13 +34,35 @@ data class StatInsightUi(
     val isMonetary: Boolean = false,
 )
 
-fun categoryLabel(category: String): String = when (category) {
-    "food" -> "Food"
-    "transportation" -> "Transit"
-    "others" -> "Others"
-    "income" -> "Income"
-    else -> category.capitalized()
+fun categoryLabel(
+    category: String,
+    categoryNames: Map<String, String> = emptyMap(),
+): String = categoryNames[category] ?: category.capitalized()
+
+data class CategorySummaryUi(
+    val categoryKey: String,
+    val categoryLabel: String,
+    val total: Double,
+    val type: String,
+    val iconKey: String,
+    val colorHex: String,
+    val isArchived: Boolean,
+)
+
+fun List<CategorySpendingTotal>.toCategorySummaryUi(): List<CategorySummaryUi> = map { category ->
+    CategorySummaryUi(
+        categoryKey = category.categoryKey,
+        categoryLabel = category.categoryName,
+        total = category.total,
+        type = category.type,
+        iconKey = category.iconKey,
+        colorHex = category.colorHex,
+        isArchived = category.isArchived,
+    )
 }
+
+fun List<CategorySummaryUi>.amountFor(categoryKey: String): Double =
+    firstOrNull { it.categoryKey == categoryKey }?.total ?: 0.0
 
 fun buildMonthTrendPoints(daysInMonth: Int, values: Map<Int, Double>): List<TrendPointUi> {
     return (1..daysInMonth).map { day ->
@@ -95,6 +118,7 @@ fun monthInsights(
     totalSpending: Double,
     year: Int,
     month: Int,
+    categoryNames: Map<String, String> = emptyMap(),
 ): List<StatInsightUi> {
     val yearMonth = YearMonth.of(year, month)
     val topCategory = expenseTransactions
@@ -108,13 +132,13 @@ fun monthInsights(
     return listOf(
         StatInsightUi(
             title = "Top category",
-            value = topCategory?.let { categoryLabel(it.key) } ?: "None",
+            value = topCategory?.let { categoryLabel(it.key, categoryNames) } ?: "None",
             subtitle = topCategory?.let { formatCompactCurrencyIraqiDinar(it.value.sumOf { tx -> tx.amount }) } ?: "",
         ),
         StatInsightUi(
             title = "Biggest expense",
             value = biggestExpense?.let { formatCompactCurrencyIraqiDinar(it.amount) } ?: formatCompactCurrencyIraqiDinar(0.0),
-            subtitle = biggestExpense?.title ?: biggestExpense?.let { categoryLabel(it.category) } ?: "No expenses",
+            subtitle = biggestExpense?.title ?: biggestExpense?.let { categoryLabel(it.category, categoryNames) } ?: "No expenses",
             isMonetary = true,
         ),
         StatInsightUi(
@@ -141,6 +165,7 @@ fun yearInsights(
     expenseTransactions: List<BudgetTransaction>,
     totalSpending: Double,
     year: Int,
+    categoryNames: Map<String, String> = emptyMap(),
 ): List<StatInsightUi> {
     val topCategory = expenseTransactions
         .groupBy { it.category }
@@ -156,13 +181,13 @@ fun yearInsights(
     return listOf(
         StatInsightUi(
             title = "Top category",
-            value = topCategory?.let { categoryLabel(it.key) } ?: "None",
+            value = topCategory?.let { categoryLabel(it.key, categoryNames) } ?: "None",
             subtitle = topCategory?.let { formatCompactCurrencyIraqiDinar(it.value.sumOf { tx -> tx.amount }) } ?: "",
         ),
         StatInsightUi(
             title = "Biggest expense",
             value = biggestExpense?.let { formatCompactCurrencyIraqiDinar(it.amount) } ?: formatCompactCurrencyIraqiDinar(0.0),
-            subtitle = biggestExpense?.title ?: biggestExpense?.let { categoryLabel(it.category) } ?: "No expenses",
+            subtitle = biggestExpense?.title ?: biggestExpense?.let { categoryLabel(it.category, categoryNames) } ?: "No expenses",
             isMonetary = true,
         ),
         StatInsightUi(

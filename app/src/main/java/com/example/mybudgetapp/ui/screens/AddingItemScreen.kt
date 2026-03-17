@@ -66,9 +66,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -77,6 +77,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
+import com.example.mybudgetapp.database.BudgetCategory
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_INCOME
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AddingItemScreenViewModel
@@ -87,6 +89,8 @@ import com.example.mybudgetapp.ui.viewmodels.SaveEntryResult
 import com.example.mybudgetapp.ui.viewmodels.SpendingItemDetailsUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -100,7 +104,8 @@ object AddingItemDestination : NavigationDestination {
 private data class QuickCategoryChip(
     val label: String,
     val value: String,
-    val iconRes: Int,
+    val iconKey: String,
+    val colorHex: String = "",
 )
 
 private enum class EntrySurfaceMode {
@@ -121,6 +126,7 @@ fun QuickAddBottomSheet(
     )
     val uiState: SpendingItemDetailsUiState = viewModel.uiState
     val recentTemplates by viewModel.recentTemplates.collectAsState()
+    val availableCategories by viewModel.availableCategories.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -170,6 +176,7 @@ fun QuickAddBottomSheet(
                     viewModel.onImageSelected(context = entryContext, uri = uri)
                 },
                 itemDetails = uiState.itemDetails,
+                availableCategories = availableCategories,
                 recentTemplates = recentTemplates,
                 onTemplateSelected = viewModel::applyTemplate,
                 saveItem = { stayOnScreen ->
@@ -207,6 +214,7 @@ fun AddingItem(
     val viewModel: AddingItemScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState: SpendingItemDetailsUiState = viewModel.uiState
     val recentTemplates by viewModel.recentTemplates.collectAsState()
+    val availableCategories by viewModel.availableCategories.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -228,6 +236,7 @@ fun AddingItem(
                     viewModel.onImageSelected(context = entryContext, uri = uri)
                 },
                 itemDetails = uiState.itemDetails,
+                availableCategories = availableCategories,
                 recentTemplates = recentTemplates,
                 onTemplateSelected = viewModel::applyTemplate,
                 saveItem = { stayOnScreen ->
@@ -264,6 +273,7 @@ private fun AddingItemBody(
     onImageSelected: (context: Context, uri: Uri?) -> Unit,
     onItemValueChange: (ItemDetails) -> Unit,
     itemDetails: ItemDetails,
+    availableCategories: List<BudgetCategory>,
     recentTemplates: List<RecentTemplateUiModel>,
     onTemplateSelected: (RecentTemplateUiModel) -> Unit,
     isEntryValid: Boolean,
@@ -283,61 +293,13 @@ private fun AddingItemBody(
         onResult = { uri: Uri? -> onImageSelected(context, uri) },
     )
 
-    val quickCategories = remember(previousCategory) {
-        when (previousCategory) {
-            "income" -> listOf(
-                QuickCategoryChip(
-                    label = "Income",
-                    value = "income",
-                    iconRes = R.drawable.baseline_attach_money_25,
-                )
-            )
-
-            "food" -> listOf(
-                QuickCategoryChip(
-                    label = "Food",
-                    value = "food",
-                    iconRes = R.drawable.baseline_fastfood_24,
-                )
-            )
-
-            "transportation" -> listOf(
-                QuickCategoryChip(
-                    label = "Transit",
-                    value = "transportation",
-                    iconRes = R.drawable.baseline_directions_transit_24,
-                )
-            )
-
-            "others" -> listOf(
-                QuickCategoryChip(
-                    label = "Others",
-                    value = "others",
-                    iconRes = R.drawable.baseline_cookie_24,
-                )
-            )
-
-            else -> listOf(
-                QuickCategoryChip(
-                    label = "Food",
-                    value = "food",
-                    iconRes = R.drawable.baseline_fastfood_24,
-                ),
-                QuickCategoryChip(
-                    label = "Transit",
-                    value = "transportation",
-                    iconRes = R.drawable.baseline_directions_transit_24,
-                ),
-                QuickCategoryChip(
-                    label = "Others",
-                    value = "others",
-                    iconRes = R.drawable.baseline_cookie_24,
-                ),
-                QuickCategoryChip(
-                    label = "Income",
-                    value = "income",
-                    iconRes = R.drawable.baseline_attach_money_25,
-                ),
+    val quickCategories = remember(availableCategories) {
+        availableCategories.map { category ->
+            QuickCategoryChip(
+                label = category.name,
+                value = category.categoryKey,
+                iconKey = category.iconKey,
+                colorHex = category.colorHex,
             )
         }
     }
@@ -345,13 +307,8 @@ private fun AddingItemBody(
     val activeCategory = itemDetails.category.ifBlank {
         if (previousCategory == "all") "" else previousCategory
     }
-    val accentColor = when (activeCategory) {
-        "food" -> BudgetTheme.extendedColors.food
-        "transportation" -> BudgetTheme.extendedColors.transit
-        "others" -> BudgetTheme.extendedColors.others
-        "income" -> BudgetTheme.extendedColors.income
-        else -> MaterialTheme.colorScheme.primary
-    }
+    val activeCategoryDetails = availableCategories.firstOrNull { it.categoryKey == activeCategory }
+    val accentColor = categoryAccentColor(activeCategoryDetails?.colorHex.orEmpty(), activeCategory)
     val animatedAccentColor = animateColorAsState(
         targetValue = accentColor,
         animationSpec = tween(durationMillis = 260),
@@ -386,7 +343,8 @@ private fun AddingItemBody(
                     itemDetails = itemDetails,
                     amountFocusRequester = amountFocusRequester,
                     onItemValueChange = onItemValueChange,
-                    activeCategory = activeCategory,
+                    activeCategoryLabel = activeCategoryDetails?.name ?: activeCategory.replaceFirstChar { it.uppercase() },
+                    isCategorySelected = activeCategory.isNotBlank(),
                 )
             }
 
@@ -403,7 +361,7 @@ private fun AddingItemBody(
                     selectedCategory = itemDetails.category,
                     accentColor = animatedAccentColor.value,
                     recentTemplates = recentTemplates,
-                    showPhotoAction = activeCategory != "income",
+                    showPhotoAction = activeCategoryDetails?.type != TRANSACTION_TYPE_INCOME,
                     imagePath = itemDetails.imagePath,
                     onCategorySelected = { category ->
                         onItemValueChange(itemDetails.copy(category = category))
@@ -413,6 +371,7 @@ private fun AddingItemBody(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                         )
                     },
+                    categoryDetails = availableCategories.associateBy { it.categoryKey },
                     onTemplateSelected = onTemplateSelected,
                 )
             }
@@ -442,7 +401,8 @@ private fun EntryHeroCard(
     itemDetails: ItemDetails,
     amountFocusRequester: FocusRequester,
     onItemValueChange: (ItemDetails) -> Unit,
-    activeCategory: String,
+    activeCategoryLabel: String,
+    isCategorySelected: Boolean,
 ) {
     Card(
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
@@ -475,9 +435,9 @@ private fun EntryHeroCard(
                     filled = false,
                 )
                 EntryBadge(
-                    label = if (activeCategory.isBlank()) "Pick category" else activeCategory.replaceFirstChar { it.uppercase() },
-                    tint = if (activeCategory.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else accentColor,
-                    filled = activeCategory.isNotBlank(),
+                    label = if (isCategorySelected) activeCategoryLabel else "Pick category",
+                    tint = if (isCategorySelected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                    filled = isCategorySelected,
                 )
             }
 
@@ -577,6 +537,7 @@ private fun EntryUtilityTray(
     imagePath: String?,
     onCategorySelected: (String) -> Unit,
     onPickPhoto: () -> Unit,
+    categoryDetails: Map<String, BudgetCategory>,
     onTemplateSelected: (RecentTemplateUiModel) -> Unit,
 ) {
     Card(
@@ -604,9 +565,13 @@ private fun EntryUtilityTray(
                 categories.forEach { category ->
                     CompactCategoryChip(
                         label = category.label,
-                        iconRes = category.iconRes,
+                        iconPainter = categoryIconPainter(category.iconKey, category.value),
                         selected = selectedCategory == category.value,
-                        accentColor = if (selectedCategory == category.value) accentColor else laneColor(category.value),
+                        accentColor = if (selectedCategory == category.value) {
+                            accentColor
+                        } else {
+                            categoryAccentColor(category.colorHex, category.value)
+                        },
                         onClick = { onCategorySelected(category.value) },
                     )
                 }
@@ -649,6 +614,7 @@ private fun EntryUtilityTray(
                     recentTemplates.forEach { template ->
                         TemplateShortcutChip(
                             template = template,
+                            colorHex = categoryDetails[template.category]?.colorHex.orEmpty(),
                             onClick = { onTemplateSelected(template) },
                         )
                     }
@@ -661,7 +627,7 @@ private fun EntryUtilityTray(
 @Composable
 private fun CompactCategoryChip(
     label: String,
-    iconRes: Int,
+    iconPainter: Painter,
     selected: Boolean,
     accentColor: Color,
     onClick: () -> Unit,
@@ -691,7 +657,7 @@ private fun CompactCategoryChip(
     )
 
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         color = backgroundColor.value,
         shape = RoundedCornerShape(BudgetTheme.radii.pill),
         border = BorderStroke(
@@ -705,7 +671,7 @@ private fun CompactCategoryChip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                painter = painterResource(id = iconRes),
+                painter = iconPainter,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
                 tint = contentColor.value,
@@ -727,7 +693,7 @@ private fun UtilityActionChip(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         color = if (filled) tint.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(BudgetTheme.radii.pill),
         border = BorderStroke(
@@ -758,10 +724,11 @@ private fun UtilityActionChip(
 @Composable
 private fun TemplateShortcutChip(
     template: RecentTemplateUiModel,
+    colorHex: String,
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         color = BudgetTheme.extendedColors.mist,
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
@@ -778,7 +745,7 @@ private fun TemplateShortcutChip(
             Text(
                 text = template.cost,
                 style = MaterialTheme.typography.labelMedium,
-                color = laneColor(template.category),
+                color = categoryAccentColor(colorHex, template.category),
             )
         }
     }
@@ -896,13 +863,4 @@ private fun SaveDock(
             }
         }
     }
-}
-
-@Composable
-private fun laneColor(category: String): Color = when (category) {
-    "food" -> BudgetTheme.extendedColors.food
-    "transportation" -> BudgetTheme.extendedColors.transit
-    "others" -> BudgetTheme.extendedColors.others
-    "income" -> BudgetTheme.extendedColors.income
-    else -> MaterialTheme.colorScheme.primary
 }

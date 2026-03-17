@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
@@ -33,6 +32,8 @@ import com.example.mybudgetapp.ui.viewmodels.SpendingOnCategoryScreenViewModel
 import com.example.mybudgetapp.ui.viewmodels.SpendingOnCategoryUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object SpendingOnCategoryDestination : NavigationDestination {
     override val route = "SpendingOnCategory"
@@ -62,7 +63,7 @@ fun SpendingOnCategoryScreen(
         topBar = {
             BudgetTopAppBar(
                 canNavigateBack = true,
-                title = compactCategoryLabel(uiState.value.sentCategory, uiState.value.category),
+                title = uiState.value.category,
                 scrollBehavior = scrollBehavior,
                 navigateBack = navigateBack,
             )
@@ -107,17 +108,9 @@ fun SpendingOnCategoryBody(
     navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
-    val categoryDisplay = when (uiState.sentCategory) {
-        "food" -> SpendingCategoryDisplayObject.items[0]
-        "others" -> SpendingCategoryDisplayObject.items[2]
-        else -> SpendingCategoryDisplayObject.items[1]
-    }
-    val categoryLabel = compactCategoryLabel(uiState.sentCategory, uiState.category)
-    val accent = when (uiState.sentCategory) {
-        "food" -> BudgetTheme.extendedColors.food
-        "others" -> BudgetTheme.extendedColors.others
-        else -> BudgetTheme.extendedColors.transit
-    }
+    val categoryLabel = uiState.category
+    val accent = categoryAccentColor(uiState.categoryColorHex, uiState.sentCategory)
+    val iconPainter = categoryIconPainter(uiState.categoryIconKey, uiState.sentCategory)
 
     LazyColumn(
         modifier = modifier,
@@ -137,7 +130,7 @@ fun SpendingOnCategoryBody(
                 subtitle = "Spending concentrated in ${categoryLabel.lowercase()} for this month.",
                 badgeLabel = "${(uiState.spendingRatio * 100).toInt()}% share",
                 accent = accent,
-                iconRes = categoryDisplay.spendingIcon,
+                iconPainter = iconPainter,
                 chips = listOf(
                     DetailHeroChipUi("Entries", uiState.transactionCount.toString()),
                     DetailHeroChipUi("Average", uiState.averageTransaction, isMonetary = true),
@@ -161,7 +154,7 @@ fun SpendingOnCategoryBody(
                     title = "No ${categoryLabel.lowercase()} entries yet",
                     message = "When entries land here, this view becomes much easier to review.",
                     accent = accent,
-                    iconRes = categoryDisplay.spendingIcon,
+                    iconPainter = iconPainter,
                 )
             }
         } else {
@@ -171,7 +164,7 @@ fun SpendingOnCategoryBody(
                     amount = item.totalCost,
                     meta = "$categoryLabel • ${item.date}",
                     imagePath = item.imagePath,
-                    iconRes = categoryDisplay.spendingIcon,
+                    iconPainter = iconPainter,
                     accent = accent,
                     onOpen = {
                         navigateToItemDates(
@@ -187,9 +180,4 @@ fun SpendingOnCategoryBody(
             }
         }
     }
-}
-
-private fun compactCategoryLabel(categoryKey: String, fallback: String): String = when (categoryKey) {
-    "transportation" -> "Transit"
-    else -> fallback
 }

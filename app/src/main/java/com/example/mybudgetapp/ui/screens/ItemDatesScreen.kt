@@ -1,7 +1,9 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,39 +17,57 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
+import com.example.mybudgetapp.database.BudgetCategory
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
+import com.example.mybudgetapp.ui.viewmodels.CategoryChangeResult
 import com.example.mybudgetapp.ui.viewmodels.ItemDatesUiState
 import com.example.mybudgetapp.ui.viewmodels.ItemDatesViewModel
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 object ItemDatesScreenNavigationDestination : NavigationDestination {
     override val route = "ItemDates"
@@ -76,7 +96,10 @@ fun ItemDatesScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val viewModel: ItemDatesViewModel = viewModel(factory = AppViewModelProvider.Factory)
-    val uiState = viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val availableCategories by viewModel.availableCategories.collectAsState()
+    val context = LocalContext.current
+    var showCategorySheet by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -92,9 +115,48 @@ fun ItemDatesScreen(
     ) { paddingValues ->
         BudgetBackdrop(modifier = Modifier.padding(paddingValues)) {
             ItemDatesBody(
-                uiState = uiState.value,
+                uiState = uiState,
+                availableCategories = availableCategories,
+                onChangeCategory = { categoryKey ->
+                    viewModel.changeCategory(categoryKey) { result ->
+                        when (result) {
+                            is CategoryChangeResult.Invalid -> {
+                                Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                            }
+
+                            is CategoryChangeResult.Success -> {
+                                Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                                showCategorySheet = false
+                            }
+                        }
+                    }
+                },
+                onOpenCategorySheet = { showCategorySheet = true },
             )
         }
+    }
+
+    if (showCategorySheet) {
+        ChangeCategoryBottomSheet(
+            currentCategory = uiState.category,
+            categories = availableCategories,
+            isSaving = uiState.isUpdatingCategory,
+            onSelectCategory = { categoryKey ->
+                viewModel.changeCategory(categoryKey) { result ->
+                    when (result) {
+                        is CategoryChangeResult.Invalid -> {
+                            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                        }
+
+                        is CategoryChangeResult.Success -> {
+                            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                            showCategorySheet = false
+                        }
+                    }
+                }
+            },
+            onDismissRequest = { showCategorySheet = false },
+        )
     }
 }
 
@@ -102,20 +164,12 @@ fun ItemDatesScreen(
 fun ItemDatesBody(
     modifier: Modifier = Modifier,
     uiState: ItemDatesUiState,
+    availableCategories: List<BudgetCategory>,
+    onOpenCategorySheet: () -> Unit,
+    onChangeCategory: (String) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
-    val displayItem = when (uiState.category) {
-        "food" -> SpendingCategoryDisplayObject.items[0]
-        "others" -> SpendingCategoryDisplayObject.items[2]
-        "transportation" -> SpendingCategoryDisplayObject.items[1]
-        else -> SpendingCategoryDisplayObject.items[3]
-    }
-    val accent = when (uiState.category) {
-        "food" -> BudgetTheme.extendedColors.food
-        "others" -> BudgetTheme.extendedColors.others
-        "transportation" -> BudgetTheme.extendedColors.transit
-        else -> BudgetTheme.extendedColors.income
-    }
+    val accent = categoryAccentColor(uiState.categoryColorHex, uiState.category)
 
     LazyColumn(
         modifier = modifier,
@@ -134,7 +188,7 @@ fun ItemDatesBody(
                 typeLabel = uiState.typeLabel,
                 categoryLabel = uiState.categoryLabel,
                 imagePath = uiState.picturePath,
-                icon = displayItem.spendingIcon,
+                iconPainter = categoryIconPainter(uiState.categoryIconKey, uiState.category),
                 accent = accent,
             )
         }
@@ -158,6 +212,17 @@ fun ItemDatesBody(
             }
         }
         item {
+            ChangeCategoryCard(
+                currentCategory = uiState.category,
+                categoryLabel = uiState.categoryLabel,
+                availableCategories = availableCategories,
+                isUpdating = uiState.isUpdatingCategory,
+                canChangeCategory = uiState.canChangeCategory,
+                onOpenCategorySheet = onOpenCategorySheet,
+                onChangeCategory = onChangeCategory,
+            )
+        }
+        item {
             DetailHistoryCard(
                 title = "Saved history",
                 subtitle = if (uiState.historyCount > 1) {
@@ -173,13 +238,202 @@ fun ItemDatesBody(
 }
 
 @Composable
+private fun ChangeCategoryCard(
+    currentCategory: String,
+    categoryLabel: String,
+    availableCategories: List<BudgetCategory>,
+    isUpdating: Boolean,
+    canChangeCategory: Boolean,
+    onOpenCategorySheet: () -> Unit,
+    onChangeCategory: (String) -> Unit,
+) {
+    val alternativeCategories = availableCategories.filterNot { it.categoryKey == currentCategory }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            Text(
+                text = "Category",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Current category: $categoryLabel",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!canChangeCategory) {
+                Text(
+                    text = "This item is no longer available to edit in the current view.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    text = "Changing the category updates every saved entry attached to this item in the current period.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            ) {
+                Button(
+                    onClick = onOpenCategorySheet,
+                    enabled = canChangeCategory && !isUpdating && alternativeCategories.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                ) {
+                    Text(text = if (isUpdating) "Updating..." else "Change category")
+                }
+                if (alternativeCategories.size == 1) {
+                    OutlinedButton(
+                        onClick = { onChangeCategory(alternativeCategories.first().categoryKey) },
+                        enabled = canChangeCategory && !isUpdating,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                    ) {
+                        Text("Quick change")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChangeCategoryBottomSheet(
+    currentCategory: String,
+    categories: List<BudgetCategory>,
+    isSaving: Boolean,
+    onSelectCategory: (String) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun dismissSheet() {
+        coroutineScope.launch {
+            delay(120)
+            sheetState.hide()
+            onDismissRequest()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        sheetState.show()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { dismissSheet() },
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = BudgetTheme.spacing.xl, vertical = BudgetTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            Text(
+                text = "Change category",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Select a category with the same transaction type.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            categories.forEach { category ->
+                val accent = categoryAccentColor(category.colorHex, category.categoryKey)
+                val isSelected = category.categoryKey == currentCategory
+                Surface(
+                    onClick = { onSelectCategory(category.categoryKey) },
+                    enabled = !isSaving && !isSelected,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                    border = BorderStroke(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) {
+                            accent.copy(alpha = 0.42f)
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                        },
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(BudgetTheme.spacing.md),
+                        horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            color = if (isSelected) {
+                                accent.copy(alpha = 0.14f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+                            },
+                            shape = RoundedCornerShape(BudgetTheme.radii.md),
+                        ) {
+                            Box(
+                                modifier = Modifier.size(44.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = categoryIconPainter(category.iconKey, category.categoryKey),
+                                    contentDescription = null,
+                                    tint = accent,
+                                )
+                            }
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = category.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = category.categoryKey,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = accent,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ItemDetailOverviewCard(
     title: String,
     amount: String,
     typeLabel: String,
     categoryLabel: String,
     imagePath: String?,
-    icon: Int,
+    iconPainter: Painter,
     accent: Color,
 ) {
     Card(
@@ -216,7 +470,7 @@ private fun ItemDetailOverviewCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         androidx.compose.material3.Icon(
-                            painter = painterResource(id = icon),
+                            painter = iconPainter,
                             contentDescription = null,
                             tint = accent,
                         )
@@ -285,7 +539,7 @@ private fun ItemDetailOverviewCard(
                             contentAlignment = Alignment.Center,
                         ) {
                             androidx.compose.material3.Icon(
-                                painter = painterResource(id = icon),
+                                painter = iconPainter,
                                 contentDescription = null,
                                 tint = accent,
                             )

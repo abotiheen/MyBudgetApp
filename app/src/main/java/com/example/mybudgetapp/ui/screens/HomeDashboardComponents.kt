@@ -31,13 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.HomeTransactionPreview
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 data class DashboardQuickStat(
     val label: String,
@@ -55,7 +56,13 @@ data class DashboardLaneUi(
     val amount: String,
     val progress: Float,
     val accent: Color,
-    val icon: Int,
+    val iconKey: String,
+    val categoryKey: String,
+    val onClick: () -> Unit,
+)
+
+data class DashboardCardAction(
+    val label: String,
     val onClick: () -> Unit,
 )
 
@@ -260,8 +267,8 @@ private fun DashboardFlowChip(
 ) {
     Surface(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .fillMaxWidth(),
+        onClick = onClick,
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
     ) {
@@ -356,6 +363,7 @@ fun DashboardLanesCard(
     title: String,
     subtitle: String,
     lanes: List<DashboardLaneUi>,
+    actions: List<DashboardCardAction> = emptyList(),
 ) {
     Card(
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
@@ -366,17 +374,40 @@ fun DashboardLanesCard(
             modifier = Modifier.padding(BudgetTheme.spacing.lg),
             verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (actions.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        actions.forEach { action ->
+                            Text(
+                                text = action.label,
+                                modifier = Modifier.clickable(onClick = action.onClick),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
             }
             lanes.forEachIndexed { index, lane ->
                 DashboardLaneRow(lane = lane)
@@ -402,6 +433,7 @@ private fun DashboardLaneRow(
         animationSpec = tween(durationMillis = 500),
         label = "dashboardLaneProgress",
     )
+    val iconPainter = categoryIconPainter(lane.iconKey, lane.categoryKey)
 
     Column(
         modifier = Modifier
@@ -429,7 +461,7 @@ private fun DashboardLaneRow(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            painter = painterResource(id = lane.icon),
+                            painter = iconPainter,
                             contentDescription = null,
                             tint = lane.accent,
                         )
@@ -546,12 +578,7 @@ fun DashboardActivityCard(
 private fun DashboardActivityRow(
     item: HomeTransactionPreview,
 ) {
-    val accent = when (item.categoryKey) {
-        "food" -> BudgetTheme.extendedColors.food
-        "transportation" -> BudgetTheme.extendedColors.transit
-        "others" -> BudgetTheme.extendedColors.others
-        else -> BudgetTheme.extendedColors.income
-    }
+    val accent = categoryAccentColor(item.categoryColorHex, item.categoryKey)
     Row(
         modifier = Modifier
             .fillMaxWidth()

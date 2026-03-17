@@ -35,11 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.SpendingCategoryDisplayObject
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
@@ -52,6 +50,7 @@ import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
+import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,8 +63,10 @@ object ThisMonthDestination : NavigationDestination {
 @Composable
 fun ThisMonthScreen(
     navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
+    navigateToCategoryBreakdown: (Int, Int) -> Unit,
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToInsights: (Int, Int) -> Unit,
+    navigateToCategories: () -> Unit,
 ) {
     val viewModel: ThisMonthScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
@@ -103,8 +104,10 @@ fun ThisMonthScreen(
                 onNextPeriod = viewModel::selectNextPeriod,
                 onOpenPeriodPicker = { isPeriodPickerVisible = true },
                 navigateToSpendingOnCategory = navigateToSpendingOnCategory,
+                navigateToCategoryBreakdown = navigateToCategoryBreakdown,
                 navigateToTotalIncome = navigateToTotalIncome,
                 navigateToInsights = navigateToInsights,
+                navigateToCategories = navigateToCategories,
             )
         }
 
@@ -140,14 +143,35 @@ fun ThisMonthScreenBody(
     onNextPeriod: () -> Unit,
     onOpenPeriodPicker: () -> Unit,
     navigateToSpendingOnCategory: (String, Int, Int) -> Unit,
+    navigateToCategoryBreakdown: (Int, Int) -> Unit,
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToInsights: (Int, Int) -> Unit,
+    navigateToCategories: () -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmount - uiState.totalSpendingAmount)
-    val totalSpending = uiState.totalSpendingAmount.takeIf { it > 0 } ?: 1.0
     val topItem = uiState.insights.getOrNull(1)
     val averageDaily = uiState.insights.getOrNull(3)
+    val topCategoryLanes = uiState.categoryTotals
+        .filter { it.total > 0 }
+        .take(3)
+        .map { category ->
+            DashboardLaneUi(
+                label = category.categoryLabel,
+                amount = formatCompactCurrencyIraqiDinar(category.total),
+                progress = if (uiState.totalSpendingAmount > 0) {
+                    (category.total / uiState.totalSpendingAmount).toFloat().coerceIn(0f, 1f)
+                } else {
+                    0f
+                },
+                accent = categoryAccentColor(category.colorHex, category.categoryKey),
+                iconKey = category.iconKey,
+                categoryKey = category.categoryKey,
+                onClick = {
+                    navigateToSpendingOnCategory(category.categoryKey, uiState.selectedMonth, uiState.selectedYear)
+                },
+            )
+        }
 
     LazyColumn(
         modifier = modifier,
@@ -224,37 +248,20 @@ fun ThisMonthScreenBody(
         item {
             DashboardLanesCard(
                 title = "Spending categories",
-                subtitle = "Open a category to inspect every entry behind the total.",
-                lanes = listOf(
-                    DashboardLaneUi(
-                        label = stringResource(id = SpendingCategoryDisplayObject.items[0].title),
-                        amount = uiState.totalSpendingOnFood,
-                        progress = (uiState.totalFoodAmount / totalSpending).toFloat().coerceIn(0f, 1f),
-                        accent = BudgetTheme.extendedColors.food,
-                        icon = SpendingCategoryDisplayObject.items[0].spendingIcon,
-                        onClick = {
-                            navigateToSpendingOnCategory("food", uiState.selectedMonth, uiState.selectedYear)
-                        },
+                subtitle = if (topCategoryLanes.isEmpty()) {
+                    "No category totals yet. Add a few entries to build this section."
+                } else {
+                    "Open the strongest categories for this period or manage the full category library."
+                },
+                lanes = topCategoryLanes,
+                actions = listOf(
+                    DashboardCardAction(
+                        label = "View all",
+                        onClick = { navigateToCategoryBreakdown(uiState.selectedYear, uiState.selectedMonth) },
                     ),
-                    DashboardLaneUi(
-                        label = stringResource(id = SpendingCategoryDisplayObject.items[1].title),
-                        amount = uiState.totalSpendingOnTransportation,
-                        progress = (uiState.totalTransportationAmount / totalSpending).toFloat().coerceIn(0f, 1f),
-                        accent = BudgetTheme.extendedColors.transit,
-                        icon = SpendingCategoryDisplayObject.items[1].spendingIcon,
-                        onClick = {
-                            navigateToSpendingOnCategory("transportation", uiState.selectedMonth, uiState.selectedYear)
-                        },
-                    ),
-                    DashboardLaneUi(
-                        label = stringResource(id = SpendingCategoryDisplayObject.items[2].title),
-                        amount = uiState.totalSpendingOnOthers,
-                        progress = (uiState.totalOthersAmount / totalSpending).toFloat().coerceIn(0f, 1f),
-                        accent = BudgetTheme.extendedColors.others,
-                        icon = SpendingCategoryDisplayObject.items[2].spendingIcon,
-                        onClick = {
-                            navigateToSpendingOnCategory("others", uiState.selectedMonth, uiState.selectedYear)
-                        },
+                    DashboardCardAction(
+                        label = "Manage",
+                        onClick = navigateToCategories,
                     ),
                 ),
             )
