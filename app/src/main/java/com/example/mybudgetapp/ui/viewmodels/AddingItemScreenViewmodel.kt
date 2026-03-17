@@ -10,7 +10,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mybudgetapp.database.BudgetCategory
 import com.example.mybudgetapp.database.BudgetTransaction
+import com.example.mybudgetapp.database.CATEGORY_KEY_FOOD
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.RecentEntryTemplate
 import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
@@ -19,6 +21,7 @@ import com.example.mybudgetapp.database.defaultTransactionTitle
 import com.example.mybudgetapp.ui.screens.AddingItemDestination
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
@@ -48,6 +51,48 @@ class AddingItemScreenViewModel(
         )
     )
         private set
+
+    private val allCategories: StateFlow<List<BudgetCategory>> = itemRepository
+        .getAllCategories(includeArchived = true)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+            initialValue = emptyList(),
+        )
+
+    val expenseCategories: StateFlow<List<BudgetCategory>> = itemRepository
+        .getCategoriesByType(TRANSACTION_TYPE_EXPENSE, includeArchived = false)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+            initialValue = emptyList(),
+        )
+
+    val incomeCategories: StateFlow<List<BudgetCategory>> = itemRepository
+        .getCategoriesByType(TRANSACTION_TYPE_INCOME, includeArchived = false)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+            initialValue = emptyList(),
+        )
+
+    val availableCategories: StateFlow<List<BudgetCategory>> = combine(
+        expenseCategories,
+        incomeCategories,
+    ) { expenseCategories, incomeCategories ->
+        when (previousCategory) {
+            "all" -> expenseCategories
+            else -> {
+                val matchingCategory = (expenseCategories + incomeCategories)
+                    .firstOrNull { it.categoryKey == previousCategory }
+                listOfNotNull(matchingCategory)
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+        initialValue = emptyList(),
+    )
 
     val recentTemplates: StateFlow<List<RecentTemplateUiModel>> = itemRepository
         .getRecentEntryTemplates(6)
@@ -101,7 +146,12 @@ class AddingItemScreenViewModel(
             return SaveEntryResult.Invalid
         }
 
-        itemRepository.insertTransaction(detailsToSave.toTransaction(currentDate.toString()))
+        itemRepository.insertTransaction(
+            detailsToSave.toTransaction(
+                date = currentDate.toString(),
+                type = resolveTransactionType(detailsToSave.category),
+            )
+        )
 
         if (stayOnScreen) {
             resetForNextEntry(detailsToSave.category)
@@ -143,9 +193,17 @@ class AddingItemScreenViewModel(
     private fun resolveCategory(currentCategory: String): String {
         return when {
             previousCategory != "all" -> previousCategory
-            currentCategory.isBlank() -> recentTemplates.value.firstOrNull()?.category ?: "food"
+            currentCategory.isBlank() -> recentTemplates.value.firstOrNull()?.category
+                ?: availableCategories.value.firstOrNull()?.categoryKey
+                ?: expenseCategories.value.firstOrNull()?.categoryKey
+                ?: CATEGORY_KEY_FOOD
             else -> currentCategory
         }
+    }
+
+    private fun resolveTransactionType(categoryKey: String): String {
+        return allCategories.value.firstOrNull { it.categoryKey == categoryKey }?.type
+            ?: if (categoryKey == TRANSACTION_TYPE_INCOME) TRANSACTION_TYPE_INCOME else TRANSACTION_TYPE_EXPENSE
     }
 
     private fun matchesCurrentEntryContext(template: RecentEntryTemplate): Boolean {
@@ -223,12 +281,12 @@ enum class SaveEntryResult {
     SavedAndReadyForNext,
 }
 
-fun ItemDetails.toTransaction(date: String): BudgetTransaction = BudgetTransaction(
+fun ItemDetails.toTransaction(date: String, type: String): BudgetTransaction = BudgetTransaction(
     transactionId = id,
-    title = name.trim().takeIf { it.isNotEmpty() } ?: defaultTransactionTitle(category, type = if (category == "income") TRANSACTION_TYPE_INCOME else TRANSACTION_TYPE_EXPENSE),
+    title = name.trim().takeIf { it.isNotEmpty() } ?: defaultTransactionTitle(category, type = type),
     amount = cost.toDouble(),
     category = category,
-    type = if (category == "income") TRANSACTION_TYPE_INCOME else TRANSACTION_TYPE_EXPENSE,
+    type = type,
     transactionDate = date,
     picturePath = imagePath,
 )

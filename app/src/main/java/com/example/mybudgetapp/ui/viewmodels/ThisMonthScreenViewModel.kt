@@ -10,8 +10,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.database.CATEGORY_KEY_FOOD
+import com.example.mybudgetapp.database.CATEGORY_KEY_OTHERS
+import com.example.mybudgetapp.database.CATEGORY_KEY_TRANSPORTATION
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.MonthPeriod
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
 import com.example.mybudgetapp.database.displayTitle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,16 +57,19 @@ class ThisMonthScreenViewModel(
         val totalsFlow = combine(
             itemRepository.getTotalSpendingOverall(month = period.month, year = period.year),
             itemRepository.getTotalIncomeOverall(year = period.year, month = period.month),
-            itemRepository.getTotalSpendingOnCategory(month = period.month, year = period.year, category = "food"),
-            itemRepository.getTotalSpendingOnCategory(month = period.month, year = period.year, category = "transportation"),
-            itemRepository.getTotalSpendingOnCategory(month = period.month, year = period.year, category = "others"),
-        ) { totalSpending, totalIncome, totalFood, totalTrans, totalOther ->
+            itemRepository.getCategoryTotalsByType(
+                type = TRANSACTION_TYPE_EXPENSE,
+                year = period.year,
+                month = period.month,
+            ),
+            itemRepository.getAllCategories(includeArchived = true),
+        ) { totalSpending, totalIncome, categoryTotals, categories ->
+            val categorySummary = categoryTotals.toCategorySummaryUi()
             MonthTotals(
                 totalSpending = totalSpending,
                 totalIncome = totalIncome,
-                totalFood = totalFood,
-                totalTransportation = totalTrans,
-                totalOthers = totalOther,
+                categoryTotals = categorySummary,
+                categoryNames = categories.associate { it.categoryKey to it.name },
             )
         }
         combine(
@@ -77,14 +84,14 @@ class ThisMonthScreenViewModel(
             ThisMonthScreenUiState(
                 totalSpendingAmount = totals.totalSpending,
                 totalIncomeAmount = totals.totalIncome,
-                totalFoodAmount = totals.totalFood,
-                totalTransportationAmount = totals.totalTransportation,
-                totalOthersAmount = totals.totalOthers,
+                totalFoodAmount = totals.categoryTotals.amountFor(CATEGORY_KEY_FOOD),
+                totalTransportationAmount = totals.categoryTotals.amountFor(CATEGORY_KEY_TRANSPORTATION),
+                totalOthersAmount = totals.categoryTotals.amountFor(CATEGORY_KEY_OTHERS),
                 totalSpending = formatCurrencyIraqiDinar(totals.totalSpending),
                 totalIncome = formatCurrencyIraqiDinar(totals.totalIncome),
-                totalSpendingOnFood = formatCompactCurrencyIraqiDinar(totals.totalFood),
-                totalSpendingOnOthers = formatCompactCurrencyIraqiDinar(totals.totalOthers),
-                totalSpendingOnTransportation = formatCompactCurrencyIraqiDinar(totals.totalTransportation),
+                totalSpendingOnFood = formatCompactCurrencyIraqiDinar(totals.categoryTotals.amountFor(CATEGORY_KEY_FOOD)),
+                totalSpendingOnOthers = formatCompactCurrencyIraqiDinar(totals.categoryTotals.amountFor(CATEGORY_KEY_OTHERS)),
+                totalSpendingOnTransportation = formatCompactCurrencyIraqiDinar(totals.categoryTotals.amountFor(CATEGORY_KEY_TRANSPORTATION)),
                 currentMonth = Month.of(period.month).toString().capitalized(),
                 selectedMonth = period.month,
                 selectedYear = period.year,
@@ -101,12 +108,19 @@ class ThisMonthScreenViewModel(
                 isCurrentPeriod = period.year == today.year && period.month == today.monthValue,
                 spendingTrend = buildMonthTrendPoints(yearMonth.lengthOfMonth(), dayMap),
                 comparison = buildMonthlyComparison(totals.totalSpending, previousTotal, yearMonth),
-                insights = monthInsights(transactions, totals.totalSpending, period.year, period.month),
+                insights = monthInsights(
+                    transactions,
+                    totals.totalSpending,
+                    period.year,
+                    period.month,
+                    totals.categoryNames,
+                ),
+                categoryTotals = totals.categoryTotals,
                 recentTransactions = transactions.take(4).map { transaction ->
                     HomeTransactionPreview(
                         title = transaction.displayTitle(),
                         categoryKey = transaction.category,
-                        category = categoryLabel(transaction.category),
+                        category = categoryLabel(transaction.category, totals.categoryNames),
                         amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
                     )
@@ -178,9 +192,8 @@ data class MonthPeriodOption(
 private data class MonthTotals(
     val totalSpending: Double,
     val totalIncome: Double,
-    val totalFood: Double,
-    val totalTransportation: Double,
-    val totalOthers: Double,
+    val categoryTotals: List<CategorySummaryUi>,
+    val categoryNames: Map<String, String>,
 )
 
 data class ThisMonthScreenUiState(
@@ -205,6 +218,7 @@ data class ThisMonthScreenUiState(
     val spendingTrend: List<TrendPointUi> = emptyList(),
     val comparison: ComparisonInsightUi = ComparisonInsightUi(),
     val insights: List<StatInsightUi> = emptyList(),
+    val categoryTotals: List<CategorySummaryUi> = emptyList(),
     val recentTransactions: List<HomeTransactionPreview> = emptyList(),
     val screenItemsUiState: MutableState<ScreenItemsUiState> = mutableStateOf(ScreenItemsUiState())
 )

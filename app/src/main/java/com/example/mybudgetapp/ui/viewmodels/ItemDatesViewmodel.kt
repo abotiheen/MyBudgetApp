@@ -12,7 +12,7 @@ import com.example.mybudgetapp.database.resolvedTransactionTitle
 import com.example.mybudgetapp.ui.screens.ItemDatesScreenNavigationDestination
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 class ItemDatesViewModel(
@@ -26,7 +26,7 @@ class ItemDatesViewModel(
     private val year: Int = checkNotNull(savedStateHandle[ItemDatesScreenNavigationDestination.year])
     private val month: Int = checkNotNull(savedStateHandle[ItemDatesScreenNavigationDestination.month])
 
-    val uiState: StateFlow<ItemDatesUiState> = if (month == 0) {
+    private val transactionsFlow = if (month == 0) {
         itemRepository.getTransactionsForItemInYear(
             title = title,
             category = category,
@@ -41,7 +41,12 @@ class ItemDatesViewModel(
             year = year,
             month = month,
         )
-    }.map { transactions ->
+    }
+
+    val uiState: StateFlow<ItemDatesUiState> = combine(
+        transactionsFlow,
+        itemRepository.getCategory(category),
+    ) { transactions, categoryDetails ->
         val latestTransaction = transactions.firstOrNull()
         val totalAmount = transactions.sumOf { it.amount }
         val displayTitle = latestTransaction?.let {
@@ -54,13 +59,15 @@ class ItemDatesViewModel(
             ItemDatesUiState(
                 itemDatesList = history,
                 category = latestTransaction?.category ?: category,
-                categoryLabel = categoryLabel(latestTransaction?.category ?: category),
+                categoryLabel = categoryDetails?.name ?: categoryLabel(latestTransaction?.category ?: category),
                 name = displayTitle,
                 date = latestDate,
                 amount = formatCurrencyIraqiDinar(totalAmount),
                 typeLabel = if ((latestTransaction?.type ?: type) == TRANSACTION_TYPE_INCOME) "Income" else "Expense",
                 picturePath = latestTransaction?.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
                 historyCount = history.size,
+                categoryIconKey = categoryDetails?.iconKey.orEmpty(),
+                categoryColorHex = categoryDetails?.colorHex.orEmpty(),
             )
         }
         .stateIn(
@@ -84,6 +91,8 @@ data class ItemDatesUiState(
     val typeLabel: String = "",
     val name: String = "",
     val historyCount: Int = 0,
+    val categoryIconKey: String = "",
+    val categoryColorHex: String = "",
 )
 
 data class ItemWIthDates(

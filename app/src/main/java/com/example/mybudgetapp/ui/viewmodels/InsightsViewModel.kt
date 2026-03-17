@@ -5,13 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
-import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.ui.screens.InsightsDestination
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import java.time.Month
 import java.time.YearMonth
@@ -29,16 +28,14 @@ class InsightsViewModel(
         val totalsFlow = combine(
             itemRepository.getTotalSpendingOverallForYear(year),
             itemRepository.getTotalSpendingOverallForYear(year - 1),
-            itemRepository.getTotalSpendingOnCategoryForYear("food", year),
-            itemRepository.getTotalSpendingOnCategoryForYear("transportation", year),
-            itemRepository.getTotalSpendingOnCategoryForYear("others", year),
-        ) { totalSpending, previousYearTotal, food, transportation, others ->
+            itemRepository.getCategoryTotalsByTypeForYear(TRANSACTION_TYPE_EXPENSE, year),
+            itemRepository.getAllCategories(includeArchived = true),
+        ) { totalSpending, previousYearTotal, categoryTotals, categories ->
             YearInsightTotals(
                 totalSpending = totalSpending,
                 previousYearTotal = previousYearTotal,
-                food = food,
-                transportation = transportation,
-                others = others,
+                categoryTotals = categoryTotals.toCategorySummaryUi(),
+                categoryNames = categories.associate { it.categoryKey to it.name },
             )
         }
         combine(
@@ -56,13 +53,17 @@ class InsightsViewModel(
                 trendSubtitle = "See how spending moved across the year",
                 trendPoints = buildYearTrendPoints(monthMap),
                 comparison = buildYearlyComparison(totals.totalSpending, totals.previousYearTotal, year),
-                overviewInsights = yearInsights(transactions, totals.totalSpending, year).take(3),
-                habitInsights = yearInsights(transactions, totals.totalSpending, year).drop(2),
-                categoryTotals = listOf(
-                    CategoryTotalUi("food", totals.food),
-                    CategoryTotalUi("transportation", totals.transportation),
-                    CategoryTotalUi("others", totals.others),
-                ),
+                overviewInsights = yearInsights(transactions, totals.totalSpending, year, totals.categoryNames).take(3),
+                habitInsights = yearInsights(transactions, totals.totalSpending, year, totals.categoryNames).drop(2),
+                categoryTotals = totals.categoryTotals.map { summary ->
+                    CategoryTotalUi(
+                        category = summary.categoryKey,
+                        label = summary.categoryLabel,
+                        total = summary.total,
+                        iconKey = summary.iconKey,
+                        colorHex = summary.colorHex,
+                    )
+                },
             )
         }
     } else {
@@ -71,16 +72,14 @@ class InsightsViewModel(
         val totalsFlow = combine(
             itemRepository.getTotalSpendingOverall(year, selectedMonth),
             itemRepository.getTotalSpendingOverall(previousPeriod.year, previousPeriod.monthValue),
-            itemRepository.getTotalSpendingOnCategory("food", year, selectedMonth),
-            itemRepository.getTotalSpendingOnCategory("transportation", year, selectedMonth),
-            itemRepository.getTotalSpendingOnCategory("others", year, selectedMonth),
-        ) { totalSpending, previousMonthTotal, food, transportation, others ->
+            itemRepository.getCategoryTotalsByType(TRANSACTION_TYPE_EXPENSE, year, selectedMonth),
+            itemRepository.getAllCategories(includeArchived = true),
+        ) { totalSpending, previousMonthTotal, categoryTotals, categories ->
             MonthInsightTotals(
                 totalSpending = totalSpending,
                 previousMonthTotal = previousMonthTotal,
-                food = food,
-                transportation = transportation,
-                others = others,
+                categoryTotals = categoryTotals.toCategorySummaryUi(),
+                categoryNames = categories.associate { it.categoryKey to it.name },
             )
         }
         combine(
@@ -99,13 +98,17 @@ class InsightsViewModel(
                 trendSubtitle = "See which days pushed spending up",
                 trendPoints = buildMonthTrendPoints(yearMonth.lengthOfMonth(), dayMap),
                 comparison = buildMonthlyComparison(totals.totalSpending, totals.previousMonthTotal, yearMonth),
-                overviewInsights = monthInsights(transactions, totals.totalSpending, year, selectedMonth).take(3),
-                habitInsights = monthInsights(transactions, totals.totalSpending, year, selectedMonth).drop(2),
-                categoryTotals = listOf(
-                    CategoryTotalUi("food", totals.food),
-                    CategoryTotalUi("transportation", totals.transportation),
-                    CategoryTotalUi("others", totals.others),
-                ),
+                overviewInsights = monthInsights(transactions, totals.totalSpending, year, selectedMonth, totals.categoryNames).take(3),
+                habitInsights = monthInsights(transactions, totals.totalSpending, year, selectedMonth, totals.categoryNames).drop(2),
+                categoryTotals = totals.categoryTotals.map { summary ->
+                    CategoryTotalUi(
+                        category = summary.categoryKey,
+                        label = summary.categoryLabel,
+                        total = summary.total,
+                        iconKey = summary.iconKey,
+                        colorHex = summary.colorHex,
+                    )
+                },
             )
         }
     }.stateIn(
@@ -133,23 +136,24 @@ enum class InsightSection {
 
 data class CategoryTotalUi(
     val category: String,
+    val label: String = "",
     val total: Double,
+    val iconKey: String = "",
+    val colorHex: String = "",
 )
 
 private data class YearInsightTotals(
     val totalSpending: Double,
     val previousYearTotal: Double,
-    val food: Double,
-    val transportation: Double,
-    val others: Double,
+    val categoryTotals: List<CategorySummaryUi>,
+    val categoryNames: Map<String, String>,
 )
 
 private data class MonthInsightTotals(
     val totalSpending: Double,
     val previousMonthTotal: Double,
-    val food: Double,
-    val transportation: Double,
-    val others: Double,
+    val categoryTotals: List<CategorySummaryUi>,
+    val categoryNames: Map<String, String>,
 )
 
 data class InsightsUiState(

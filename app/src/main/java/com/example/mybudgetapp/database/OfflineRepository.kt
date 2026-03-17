@@ -46,6 +46,30 @@ class OfflineRepository(
     override fun getCategory(categoryKey: String): Flow<BudgetCategory?> =
         categoryDao.getCategory(categoryKey)
 
+    override fun getCategoryTotalsByType(
+        type: String,
+        year: Int,
+        month: Int,
+        includeArchived: Boolean,
+    ): Flow<List<CategorySpendingTotal>> =
+        categoryDao.getCategoryTotalsByType(
+            type = type,
+            year = year,
+            month = month,
+            includeArchived = includeArchived,
+        )
+
+    override fun getCategoryTotalsByTypeForYear(
+        type: String,
+        year: Int,
+        includeArchived: Boolean,
+    ): Flow<List<CategorySpendingTotal>> =
+        categoryDao.getCategoryTotalsByTypeForYear(
+            type = type,
+            year = year,
+            includeArchived = includeArchived,
+        )
+
     override fun getTransactionsForItemInMonth(
         title: String,
         category: String,

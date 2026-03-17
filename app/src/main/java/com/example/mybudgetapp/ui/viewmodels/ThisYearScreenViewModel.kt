@@ -7,7 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
+import com.example.mybudgetapp.database.CATEGORY_KEY_FOOD
+import com.example.mybudgetapp.database.CATEGORY_KEY_OTHERS
+import com.example.mybudgetapp.database.CATEGORY_KEY_TRANSPORTATION
 import com.example.mybudgetapp.database.ItemRepository
+import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
 import com.example.mybudgetapp.database.displayTitle
 import com.example.mybudgetapp.ui.widgets.DropDownItem
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,16 +47,17 @@ class ThisYearScreenViewModel(
         val totalsFlow = combine(
             itemRepository.getTotalSpendingOverallForYear(year = currentYear),
             itemRepository.getTotalIncomeOverallForYear(year = currentYear),
-            itemRepository.getTotalSpendingOnCategoryForYear(year = currentYear, category = "food"),
-            itemRepository.getTotalSpendingOnCategoryForYear(year = currentYear, category = "transportation"),
-            itemRepository.getTotalSpendingOnCategoryForYear(year = currentYear, category = "others")
-        ) { totalSpending, totalIncome, totalFood, totalTrans, totalOther ->
+            itemRepository.getCategoryTotalsByTypeForYear(
+                type = TRANSACTION_TYPE_EXPENSE,
+                year = currentYear,
+            ),
+            itemRepository.getAllCategories(includeArchived = true),
+        ) { totalSpending, totalIncome, categoryTotals, categories ->
             YearTotals(
                 totalSpending = totalSpending,
                 totalIncome = totalIncome,
-                totalFood = totalFood,
-                totalTransportation = totalTrans,
-                totalOthers = totalOther,
+                categoryTotals = categoryTotals.toCategorySummaryUi(),
+                categoryNames = categories.associate { it.categoryKey to it.name },
             )
         }
         combine(
@@ -66,14 +71,14 @@ class ThisYearScreenViewModel(
             ThisYearScreenUiState(
                 totalSpendingAmountForYear = totals.totalSpending,
                 totalIncomeAmountForYear = totals.totalIncome,
-                totalFoodAmountForYear = totals.totalFood,
-                totalTransportationAmountForYear = totals.totalTransportation,
-                totalOthersAmountForYear = totals.totalOthers,
+                totalFoodAmountForYear = totals.categoryTotals.amountFor(CATEGORY_KEY_FOOD),
+                totalTransportationAmountForYear = totals.categoryTotals.amountFor(CATEGORY_KEY_TRANSPORTATION),
+                totalOthersAmountForYear = totals.categoryTotals.amountFor(CATEGORY_KEY_OTHERS),
                 totalSpendingForYear = formatCurrencyIraqiDinar(totals.totalSpending),
                 totalIncomeForYear = formatCurrencyIraqiDinar(totals.totalIncome),
-                totalSpendingOnFoodForYear = formatCompactCurrencyIraqiDinar(totals.totalFood),
-                totalSpendingOnOthersForYear = formatCompactCurrencyIraqiDinar(totals.totalOthers),
-                totalSpendingOnTransportationForYear = formatCompactCurrencyIraqiDinar(totals.totalTransportation),
+                totalSpendingOnFoodForYear = formatCompactCurrencyIraqiDinar(totals.categoryTotals.amountFor(CATEGORY_KEY_FOOD)),
+                totalSpendingOnOthersForYear = formatCompactCurrencyIraqiDinar(totals.categoryTotals.amountFor(CATEGORY_KEY_OTHERS)),
+                totalSpendingOnTransportationForYear = formatCompactCurrencyIraqiDinar(totals.categoryTotals.amountFor(CATEGORY_KEY_TRANSPORTATION)),
                 currentMonth = Month.of(date.monthValue).toString().capitalized(),
                 selectedYear = currentYear,
                 currentYear = currentYear.toString(),
@@ -88,12 +93,18 @@ class ThisYearScreenViewModel(
                 isCurrentYear = currentYear == date.year,
                 spendingTrend = buildYearTrendPoints(monthMap),
                 comparison = buildYearlyComparison(totals.totalSpending, previousYearTotal, currentYear),
-                insights = yearInsights(transactions, totals.totalSpending, currentYear),
+                insights = yearInsights(
+                    transactions,
+                    totals.totalSpending,
+                    currentYear,
+                    totals.categoryNames,
+                ),
+                categoryTotals = totals.categoryTotals,
                 recentTransactions = transactions.take(4).map { transaction ->
                     HomeTransactionPreview(
                         title = transaction.displayTitle(),
                         categoryKey = transaction.category,
-                        category = categoryLabel(transaction.category),
+                        category = categoryLabel(transaction.category, totals.categoryNames),
                         amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
                     )
@@ -147,9 +158,8 @@ private fun List<Int>.withCurrentYear(currentYear: Int): List<Int> {
 private data class YearTotals(
     val totalSpending: Double,
     val totalIncome: Double,
-    val totalFood: Double,
-    val totalTransportation: Double,
-    val totalOthers: Double,
+    val categoryTotals: List<CategorySummaryUi>,
+    val categoryNames: Map<String, String>,
 )
 
 data class ThisYearScreenUiState(
@@ -173,6 +183,7 @@ data class ThisYearScreenUiState(
     val spendingTrend: List<TrendPointUi> = emptyList(),
     val comparison: ComparisonInsightUi = ComparisonInsightUi(),
     val insights: List<StatInsightUi> = emptyList(),
+    val categoryTotals: List<CategorySummaryUi> = emptyList(),
     val recentTransactions: List<HomeTransactionPreview> = emptyList(),
     val screenItemsUiState: MutableState<ScreenItemsUiState> = mutableStateOf(ScreenItemsUiState())
 )

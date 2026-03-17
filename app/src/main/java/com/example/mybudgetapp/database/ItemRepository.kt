@@ -17,6 +17,8 @@ interface ItemRepository {
     fun getAllCategories(includeArchived: Boolean = true): Flow<List<BudgetCategory>>
     fun getCategoriesByType(type: String, includeArchived: Boolean = false): Flow<List<BudgetCategory>>
     fun getCategory(categoryKey: String): Flow<BudgetCategory?>
+    fun getCategoryTotalsByType(type: String, year: Int, month: Int, includeArchived: Boolean = false): Flow<List<CategorySpendingTotal>>
+    fun getCategoryTotalsByTypeForYear(type: String, year: Int, includeArchived: Boolean = false): Flow<List<CategorySpendingTotal>>
     fun getTransactionsForItemInMonth(title: String, category: String, type: String, year: Int, month: Int): Flow<List<BudgetTransaction>>
     fun getTransactionsForItemInYear(title: String, category: String, type: String, year: Int): Flow<List<BudgetTransaction>>
     fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>

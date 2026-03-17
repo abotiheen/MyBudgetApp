@@ -62,6 +62,17 @@ data class MonthlySpendingTotal(
     val total: Double,
 )
 
+data class CategorySpendingTotal(
+    val categoryKey: String,
+    val categoryName: String,
+    val type: String,
+    val iconKey: String,
+    val colorHex: String,
+    val isArchived: Boolean,
+    val sortOrder: Int,
+    val total: Double,
+)
+
 fun BudgetTransaction.displayTitle(): String {
     return resolvedTransactionTitle(title, category, type)
 }
