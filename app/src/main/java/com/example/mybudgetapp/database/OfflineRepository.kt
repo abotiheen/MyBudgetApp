@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 
 class OfflineRepository(
     private val transactionDao: TransactionDao,
+    private val categoryDao: CategoryDao,
 ) : ItemRepository {
 
     override suspend fun insertTransaction(transaction: BudgetTransaction): Long =
@@ -21,8 +22,29 @@ class OfflineRepository(
     override suspend fun deleteTransactionWithId(id: Long) =
         transactionDao.deleteTransactionWithId(id)
 
+    override suspend fun insertCategory(category: BudgetCategory) =
+        categoryDao.insertCategory(category)
+
+    override suspend fun insertCategories(categories: List<BudgetCategory>) =
+        categoryDao.insertCategories(categories)
+
+    override suspend fun updateCategory(category: BudgetCategory) =
+        categoryDao.updateCategory(category)
+
+    override suspend fun archiveCategory(categoryKey: String) =
+        categoryDao.archiveCategory(categoryKey)
+
     override fun getTransaction(id: Long): Flow<BudgetTransaction> =
         transactionDao.getTransaction(id)
+
+    override fun getAllCategories(includeArchived: Boolean): Flow<List<BudgetCategory>> =
+        categoryDao.getAllCategories(includeArchived)
+
+    override fun getCategoriesByType(type: String, includeArchived: Boolean): Flow<List<BudgetCategory>> =
+        categoryDao.getCategoriesByType(type, includeArchived)
+
+    override fun getCategory(categoryKey: String): Flow<BudgetCategory?> =
+        categoryDao.getCategory(categoryKey)
 
     override fun getTransactionsForItemInMonth(
         title: String,

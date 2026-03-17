@@ -26,6 +26,7 @@ class AppDataContainer(context: Context) : AppContainer {
     override val itemRepository: ItemRepository by lazy {
         OfflineRepository(
             transactionDao = database.transactionDao(),
+            categoryDao = database.categoryDao(),
         )
     }
 

@@ -6,6 +6,7 @@ import com.example.mybudgetapp.database.BudgetDatabase
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
 import com.example.mybudgetapp.database.TRANSACTION_TYPE_INCOME
+import com.example.mybudgetapp.database.defaultBudgetCategories
 import java.time.Instant
 
 class CloudBackupLocalDataSource(
@@ -14,6 +15,7 @@ class CloudBackupLocalDataSource(
     suspend fun exportSnapshot(): BackupSnapshot = BackupSnapshot(
         exportedAt = Instant.now().toString(),
         appVersion = BuildConfig.VERSION_CODE,
+        categories = database.categoryDao().getAllCategoriesList(),
         transactions = database.transactionDao().getAllTransactions(),
     )
 
@@ -23,9 +25,11 @@ class CloudBackupLocalDataSource(
             snapshot.items.isNotEmpty() && snapshot.purchases.isNotEmpty() -> snapshot.toTransactions()
             else -> emptyList()
         }
+        val categoriesToImport = snapshot.categories.ifEmpty { defaultBudgetCategories() }
 
         database.withTransaction {
             database.clearAllTables()
+            database.categoryDao().insertCategories(categoriesToImport)
             database.transactionDao().insertTransactions(transactionsToImport)
         }
     }

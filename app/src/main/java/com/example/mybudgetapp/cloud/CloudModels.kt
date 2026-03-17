@@ -1,6 +1,7 @@
 package com.example.mybudgetapp.cloud
 
 import com.example.mybudgetapp.BuildConfig
+import com.example.mybudgetapp.database.BudgetCategory
 import com.example.mybudgetapp.database.BudgetTransaction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -52,6 +53,7 @@ data class AuthErrorDto(
 data class BackupSnapshot(
     val exportedAt: String,
     val appVersion: Int,
+    val categories: List<BudgetCategory> = emptyList(),
     val transactions: List<BudgetTransaction> = emptyList(),
     val items: List<LegacyBackupItem> = emptyList(),
     val purchases: List<LegacyBackupPurchase> = emptyList(),

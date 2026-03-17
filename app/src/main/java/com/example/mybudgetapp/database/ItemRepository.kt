@@ -8,8 +8,15 @@ interface ItemRepository {
     suspend fun updateTransaction(transaction: BudgetTransaction)
     suspend fun deleteTransaction(transaction: BudgetTransaction)
     suspend fun deleteTransactionWithId(id: Long)
+    suspend fun insertCategory(category: BudgetCategory)
+    suspend fun insertCategories(categories: List<BudgetCategory>)
+    suspend fun updateCategory(category: BudgetCategory)
+    suspend fun archiveCategory(categoryKey: String)
 
     fun getTransaction(id: Long): Flow<BudgetTransaction>
+    fun getAllCategories(includeArchived: Boolean = true): Flow<List<BudgetCategory>>
+    fun getCategoriesByType(type: String, includeArchived: Boolean = false): Flow<List<BudgetCategory>>
+    fun getCategory(categoryKey: String): Flow<BudgetCategory?>
     fun getTransactionsForItemInMonth(title: String, category: String, type: String, year: Int, month: Int): Flow<List<BudgetTransaction>>
     fun getTransactionsForItemInYear(title: String, category: String, type: String, year: Int): Flow<List<BudgetTransaction>>
     fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>
