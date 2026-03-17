@@ -59,7 +59,6 @@ object TotalIncomeDestination : NavigationDestination {
 fun TotalIncomeScreen(
     modifier: Modifier = Modifier,
     navigateBack: () -> Unit,
-    navigateToTransactionType: (Boolean) -> Unit,
     navigateToAddItem: (String) -> Unit,
     navigateToItemDates: (Long) -> Unit,
 ) {
@@ -104,7 +103,7 @@ fun TotalIncomeScreen(
         BudgetBackdrop(modifier = Modifier.padding(paddingValues)) {
             TotalIncomeBody(
                 uiState = uiState.value,
-                onToggleType = navigateToTransactionType,
+                onToggleType = viewModel::selectTransactionType,
                 deleteItem = { viewModel.deleteItem(it) },
                 navigateToItemDates = navigateToItemDates,
             )

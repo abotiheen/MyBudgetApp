@@ -26,16 +26,25 @@ class TotalSpendingScreenViewModel(
 
     private val currentMonthValue: Int = checkNotNull(savedStateHandle[TotalIncomeDestination.month])
     private val currentYear: Int = checkNotNull(savedStateHandle[TotalIncomeDestination.year])
-    private val isIncome: Boolean = checkNotNull(savedStateHandle[TotalIncomeDestination.isIncome])
+    private val initialIsIncome: Boolean = checkNotNull(savedStateHandle[TotalIncomeDestination.isIncome])
     private val date: LocalDate = LocalDate.now()
     private val isDeleteDialogVisible = MutableStateFlow(false)
+    private val selectedTransactionType = MutableStateFlow(initialIsIncome)
+    private val screenMeta = combine(
+        selectedTransactionType,
+        isDeleteDialogVisible,
+    ) { isIncome, isDeleteDialogVisible ->
+        isIncome to isDeleteDialogVisible
+    }
 
     val uiState: StateFlow<TotalSpendingUiState> = combine(
         itemRepository.getTransactions(month = currentMonthValue, year = currentYear),
         itemRepository.getTotalSpendingOverall(year = currentYear, month = currentMonthValue),
         itemRepository.getTotalIncomeOverall(year = currentYear, month = currentMonthValue),
-        itemRepository.getIncomeTransactions(year = currentYear, month = currentMonthValue)
-    ) { spendingItems, totalSpending, totalIncome, incomeItems ->
+        itemRepository.getIncomeTransactions(year = currentYear, month = currentMonthValue),
+        screenMeta,
+    ) { spendingItems, totalSpending, totalIncome, incomeItems, screenMeta ->
+        val (isIncome, isDeleteDialogVisible) = screenMeta
         TotalSpendingUiState(
             totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
             spendingItemList = spendingItems.map { it.toSpendingItem() },
@@ -44,7 +53,7 @@ class TotalSpendingScreenViewModel(
             totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
             incomeItemList = incomeItems.map { it.toSpendingItem() },
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
-            isDeleteDialogVisible = isDeleteDialogVisible.value
+            isDeleteDialogVisible = isDeleteDialogVisible
         )
     }.stateIn(
         scope = viewModelScope,
@@ -60,6 +69,10 @@ class TotalSpendingScreenViewModel(
 
     fun displayConfirmDelete(isIt: Boolean) {
         isDeleteDialogVisible.value = isIt
+    }
+
+    fun selectTransactionType(isIncome: Boolean) {
+        selectedTransactionType.value = isIncome
     }
 
     companion object {
