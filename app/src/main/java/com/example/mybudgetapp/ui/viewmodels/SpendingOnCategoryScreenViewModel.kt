@@ -10,7 +10,7 @@ import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
-import com.example.mybudgetapp.database.displayTitle
+import com.example.mybudgetapp.database.resolvedTransactionTitle
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,8 +44,11 @@ class SpendingOnCategoryScreenViewModel(
             year = currentYear,
         )
     ) { itemList, totalCategory, totalSpending ->
-        val mappedItems = itemList.map { it.toSpendingOnCategoryItem() }
-        val averageAmount = if (itemList.isEmpty()) 0.0 else totalCategory / itemList.size
+        val mappedItems = itemList.toGroupedSpendingOnCategoryItems(
+            year = currentYear,
+            month = currentMonthValue,
+        )
+        val averageAmount = if (mappedItems.isEmpty()) 0.0 else totalCategory / mappedItems.size
         val biggestAmount = itemList.maxOfOrNull { it.amount } ?: 0.0
         SpendingOnCategoryUiState(
             totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
@@ -56,7 +59,7 @@ class SpendingOnCategoryScreenViewModel(
             category = category.capitalized(),
             sentCategory = category,
             periodLabel = "${Month.of(currentMonthValue).name.capitalized()} $currentYear",
-            transactionCount = itemList.size,
+            transactionCount = mappedItems.size,
             averageTransaction = formatCompactCurrencyIraqiDinar(averageAmount),
             biggestTransaction = formatCompactCurrencyIraqiDinar(biggestAmount),
             isDeleteDialogVisible = isDeleteDialogVisible.value,
@@ -104,15 +107,36 @@ data class SpendingOnCategoryItem(
     val date: String = "",
     val totalCost: String = "",
     val amountValue: Double = 0.0,
-    val itemId: Long = 0
+    val itemId: Long = 0,
+    val category: String = "",
+    val type: String = "",
+    val year: Int = 0,
+    val month: Int = 0,
 )
 
-fun BudgetTransaction.toSpendingOnCategoryItem(): SpendingOnCategoryItem =
-    SpendingOnCategoryItem(
-        itemId = transactionId,
-        imagePath = picturePath,
-        name = displayTitle(),
-        date = transactionDate,
-        totalCost = formatCompactCurrencyIraqiDinar(amount),
-        amountValue = amount,
-    )
+fun List<BudgetTransaction>.toGroupedSpendingOnCategoryItems(
+    year: Int,
+    month: Int,
+): List<SpendingOnCategoryItem> = this
+    .groupBy { transaction ->
+        resolvedTransactionTitle(transaction.title, transaction.category, transaction.type)
+    }
+    .values
+    .map { transactions ->
+        val latestTransaction = transactions.maxWithOrNull(
+            compareBy<BudgetTransaction> { it.transactionDate }.thenBy { it.transactionId }
+        ) ?: transactions.first()
+        SpendingOnCategoryItem(
+            itemId = latestTransaction.transactionId,
+            imagePath = latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
+            name = resolvedTransactionTitle(latestTransaction.title, latestTransaction.category, latestTransaction.type),
+            date = latestTransaction.transactionDate,
+            totalCost = formatCompactCurrencyIraqiDinar(transactions.sumOf { it.amount }),
+            amountValue = transactions.sumOf { it.amount },
+            category = latestTransaction.category,
+            type = latestTransaction.type,
+            year = year,
+            month = month,
+        )
+    }
+    .sortedWith(compareByDescending<SpendingOnCategoryItem> { it.date }.thenByDescending { it.itemId })

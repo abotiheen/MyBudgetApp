@@ -47,11 +47,17 @@ class TotalSpendingScreenForYearViewModel(
         val (isIncome, isDeleteDialogVisible) = screenMeta
         TotalSpendingUiState(
             totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
-            spendingItemList = spendingItems.map { it.toSpendingItem() },
+            spendingItemList = spendingItems.toGroupedSpendingItems(
+                year = currentYear,
+                month = 0,
+            ),
             month = currentYear.toString(),
             isIncome = isIncome,
             totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
-            incomeItemList = incomeItems.map { it.toSpendingItem() },
+            incomeItemList = incomeItems.toGroupedSpendingItems(
+                year = currentYear,
+                month = 0,
+            ),
             isThisMonthCurrent = isThisYearCurrent,
             isDeleteDialogVisible = isDeleteDialogVisible
         )

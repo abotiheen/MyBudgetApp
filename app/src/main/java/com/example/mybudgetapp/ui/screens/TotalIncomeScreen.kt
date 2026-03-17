@@ -60,7 +60,7 @@ fun TotalIncomeScreen(
     modifier: Modifier = Modifier,
     navigateBack: () -> Unit,
     navigateToAddItem: (String) -> Unit,
-    navigateToItemDates: (Long) -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val viewModel: TotalSpendingScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -117,7 +117,7 @@ fun TotalIncomeBody(
     uiState: TotalSpendingUiState,
     onToggleType: (Boolean) -> Unit,
     deleteItem: (Long) -> Unit,
-    navigateToItemDates: (Long) -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val items = if (uiState.isIncome) uiState.incomeItemList else uiState.spendingItemList
@@ -191,7 +191,15 @@ fun TotalIncomeBody(
                     isIncome = uiState.isIncome,
                     accent = accent,
                     onDelete = { deleteItem(item.itemId) },
-                    onOpen = { navigateToItemDates(item.itemId) },
+                    onOpen = {
+                        navigateToItemDates(
+                            item.name,
+                            item.category,
+                            item.type,
+                            item.year,
+                            item.month,
+                        )
+                    },
                 )
             }
         }

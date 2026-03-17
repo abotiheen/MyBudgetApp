@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 
 const val TRANSACTION_TYPE_EXPENSE = "expense"
 const val TRANSACTION_TYPE_INCOME = "income"
+const val DEFAULT_TRANSACTION_TITLE = "item"
 
 @Serializable
 @Entity(tableName = "transactions")
@@ -44,13 +45,10 @@ data class MonthlySpendingTotal(
 )
 
 fun BudgetTransaction.displayTitle(): String {
-    return title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
+    return resolvedTransactionTitle(title, category, type)
 }
 
-fun defaultTransactionTitle(category: String, type: String): String = when {
-    type == TRANSACTION_TYPE_INCOME -> "Income"
-    category == "food" -> "Food"
-    category == "transportation" -> "Transit"
-    category == "others" -> "Other expense"
-    else -> "Expense"
-}
+fun resolvedTransactionTitle(title: String?, category: String, type: String): String =
+    title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
+
+fun defaultTransactionTitle(category: String, type: String): String = DEFAULT_TRANSACTION_TITLE

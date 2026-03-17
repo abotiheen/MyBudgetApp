@@ -157,9 +157,15 @@ fun AppNavHost (
                         "${AddingItemDestination.route}/$it"
                     )
                 } ,
-                navigateToItemDates = {
+                navigateToItemDates = { title, category, type, year, month ->
                     navController.navigate(
-                        "${ItemDatesScreenNavigationDestination.route}/$it"
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
                     )
                 }
                  ,
@@ -186,9 +192,15 @@ fun AppNavHost (
                     )
                                     },
                 navigateBack = {navController.navigateUp()},
-                navigateToItemDates = {
+                navigateToItemDates = { title, category, type, year, month ->
                     navController.navigate(
-                        "${ItemDatesScreenNavigationDestination.route}/$it"
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
                     )
                 }
             )
@@ -214,9 +226,15 @@ fun AppNavHost (
                         "${AddingItemDestination.route}/$category"
                     )
                 },
-                navigateToItemDates = {
+                navigateToItemDates = { title, category, type, year, month ->
                     navController.navigate(
-                        "${ItemDatesScreenNavigationDestination.route}/$it"
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
                     )
                 }
             )
@@ -240,9 +258,15 @@ fun AppNavHost (
                         "${AddingItemDestination.route}/$category"
                     )
                 },
-                navigateToItemDates = {
+                navigateToItemDates = { title, category, type, year, month ->
                     navController.navigate(
-                        "${ItemDatesScreenNavigationDestination.route}/$it"
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
                     )
                 }
             )
@@ -251,8 +275,20 @@ fun AppNavHost (
         composable(
             route = ItemDatesScreenNavigationDestination.routeWithArgs,
             arguments = listOf(
-                navArgument(ItemDatesScreenNavigationDestination.id.toString()){
-                    type = NavType.LongType
+                navArgument(ItemDatesScreenNavigationDestination.title) {
+                    type = NavType.StringType
+                },
+                navArgument(ItemDatesScreenNavigationDestination.category) {
+                    type = NavType.StringType
+                },
+                navArgument(ItemDatesScreenNavigationDestination.type) {
+                    type = NavType.StringType
+                },
+                navArgument(ItemDatesScreenNavigationDestination.year) {
+                    type = NavType.IntType
+                },
+                navArgument(ItemDatesScreenNavigationDestination.month) {
+                    type = NavType.IntType
                 },
             )
         ) {

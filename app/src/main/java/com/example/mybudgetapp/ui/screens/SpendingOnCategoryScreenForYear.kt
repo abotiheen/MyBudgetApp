@@ -67,7 +67,7 @@ fun SpendingOnCategoryScreenForYear(
     modifier: Modifier = Modifier,
     navigateToAddItem: (String) -> Unit,
     navigateBack: () -> Unit,
-    navigateToItemDates: (Long) -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val viewModel: SpendingOnCategoryForYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -123,7 +123,7 @@ private fun SpendingOnCategoryYearBody(
     modifier: Modifier = Modifier,
     uiState: SpendingOnCategoryUiState,
     deleteItem: (Long) -> Unit,
-    navigateToItemDates: (Long) -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val categoryLabel = compactCategoryLabel(uiState.sentCategory, uiState.category)
@@ -206,7 +206,15 @@ private fun SpendingOnCategoryYearBody(
                     deleteItem = { deleteItem(item.itemId) },
                     date = item.date,
                     imagePath = item.imagePath,
-                    navigateToItemDates = { navigateToItemDates(item.itemId) },
+                    navigateToItemDates = {
+                        navigateToItemDates(
+                            item.name,
+                            item.category,
+                            item.type,
+                            item.year,
+                            item.month,
+                        )
+                    },
                     displayItem = categoryDisplay,
                 )
             }

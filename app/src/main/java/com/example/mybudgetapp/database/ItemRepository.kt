@@ -10,6 +10,8 @@ interface ItemRepository {
     suspend fun deleteTransactionWithId(id: Long)
 
     fun getTransaction(id: Long): Flow<BudgetTransaction>
+    fun getTransactionsForItemInMonth(title: String, category: String, type: String, year: Int, month: Int): Flow<List<BudgetTransaction>>
+    fun getTransactionsForItemInYear(title: String, category: String, type: String, year: Int): Flow<List<BudgetTransaction>>
     fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>>
     fun getAllMonths(year: Int): Flow<List<Int>>
     fun getAvailableMonthPeriods(): Flow<List<MonthPeriod>>

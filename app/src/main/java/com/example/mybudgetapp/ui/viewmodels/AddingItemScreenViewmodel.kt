@@ -225,7 +225,7 @@ enum class SaveEntryResult {
 
 fun ItemDetails.toTransaction(date: String): BudgetTransaction = BudgetTransaction(
     transactionId = id,
-    title = name.trim().takeIf { it.isNotEmpty() },
+    title = name.trim().takeIf { it.isNotEmpty() } ?: defaultTransactionTitle(category, type = if (category == "income") TRANSACTION_TYPE_INCOME else TRANSACTION_TYPE_EXPENSE),
     amount = cost.toDouble(),
     category = category,
     type = if (category == "income") TRANSACTION_TYPE_INCOME else TRANSACTION_TYPE_EXPENSE,

@@ -24,6 +24,34 @@ class OfflineRepository(
     override fun getTransaction(id: Long): Flow<BudgetTransaction> =
         transactionDao.getTransaction(id)
 
+    override fun getTransactionsForItemInMonth(
+        title: String,
+        category: String,
+        type: String,
+        year: Int,
+        month: Int,
+    ): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsForItemInMonth(
+            title = title,
+            category = category,
+            type = type,
+            year = year,
+            month = month,
+        )
+
+    override fun getTransactionsForItemInYear(
+        title: String,
+        category: String,
+        type: String,
+        year: Int,
+    ): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsForItemInYear(
+            title = title,
+            category = category,
+            type = type,
+            year = year,
+        )
+
     override fun getRecentEntryTemplates(limit: Int): Flow<List<RecentEntryTemplate>> =
         transactionDao.getRecentEntryTemplates(limit)
 

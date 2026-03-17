@@ -1,5 +1,6 @@
 package com.example.mybudgetapp.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,10 +52,20 @@ import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 object ItemDatesScreenNavigationDestination : NavigationDestination {
     override val route = "ItemDates"
     override val titleRes = R.string.spending_on_category_screen
-    const val id: Long = 0
-    const val imagePath: String = ""
-    const val name: String = ""
-    val routeWithArgs = "$route/{$id}"
+    const val title = "title"
+    const val category = "category"
+    const val type = "type"
+    const val year = "year"
+    const val month = "month"
+    val routeWithArgs = "$route/{$title}/{$category}/{$type}/{$year}/{$month}"
+
+    fun createRoute(
+        title: String,
+        category: String,
+        type: String,
+        year: Int,
+        month: Int,
+    ): String = "$route/${Uri.encode(title)}/$category/$type/$year/$month"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,7 +151,7 @@ fun ItemDatesBody(
                 )
                 DetailInfoTile(
                     modifier = Modifier.weight(1f),
-                    label = "Saved on",
+                    label = if (uiState.historyCount > 1) "Latest save" else "Saved on",
                     value = uiState.date,
                     subtitle = "Recorded timeline",
                 )
@@ -149,7 +160,11 @@ fun ItemDatesBody(
         item {
             DetailHistoryCard(
                 title = "Saved history",
-                subtitle = "The exact recorded value attached to this entry.",
+                subtitle = if (uiState.historyCount > 1) {
+                    "Every recorded save attached to this grouped item."
+                } else {
+                    "The exact recorded value attached to this entry."
+                },
                 history = uiState.itemDatesList,
                 accent = accent,
             )

@@ -8,7 +8,7 @@ import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
-import com.example.mybudgetapp.database.displayTitle
+import com.example.mybudgetapp.database.resolvedTransactionTitle
 import com.example.mybudgetapp.ui.screens.TotalIncomeDestination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,11 +47,17 @@ class TotalSpendingScreenViewModel(
         val (isIncome, isDeleteDialogVisible) = screenMeta
         TotalSpendingUiState(
             totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
-            spendingItemList = spendingItems.map { it.toSpendingItem() },
+            spendingItemList = spendingItems.toGroupedSpendingItems(
+                year = currentYear,
+                month = currentMonthValue,
+            ),
             month = "${Month.of(currentMonthValue).toString().capitalized()} $currentYear",
             isIncome = isIncome,
             totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
-            incomeItemList = incomeItems.map { it.toSpendingItem() },
+            incomeItemList = incomeItems.toGroupedSpendingItems(
+                year = currentYear,
+                month = currentMonthValue,
+            ),
             isThisMonthCurrent = currentYear == date.year && currentMonthValue == date.monthValue,
             isDeleteDialogVisible = isDeleteDialogVisible
         )
@@ -97,17 +103,46 @@ data class SpendingItem(
     val date: String = "",
     val totalCost: String = "",
     val amountValue: Double = 0.0,
+    val type: String = "",
     val category: String = "",
-    val itemId: Long = 0
+    val itemId: Long = 0,
+    val year: Int = 0,
+    val month: Int = 0,
 )
 
-fun BudgetTransaction.toSpendingItem(): SpendingItem =
-    SpendingItem(
-        imagePath = picturePath,
-        name = displayTitle(),
-        date = transactionDate,
-        totalCost = formatCompactCurrencyIraqiDinar(amount),
-        amountValue = amount,
-        category = category,
-        itemId = transactionId
-    )
+private data class SpendingItemGroupKey(
+    val title: String,
+    val category: String,
+    val type: String,
+)
+
+fun List<BudgetTransaction>.toGroupedSpendingItems(
+    year: Int,
+    month: Int,
+): List<SpendingItem> = this
+    .groupBy { transaction ->
+        SpendingItemGroupKey(
+            title = resolvedTransactionTitle(transaction.title, transaction.category, transaction.type),
+            category = transaction.category,
+            type = transaction.type,
+        )
+    }
+    .values
+    .map { transactions ->
+        val latestTransaction = transactions.maxWithOrNull(
+            compareBy<BudgetTransaction> { it.transactionDate }.thenBy { it.transactionId }
+        ) ?: transactions.first()
+        SpendingItem(
+            imagePath = latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath },
+            name = resolvedTransactionTitle(latestTransaction.title, latestTransaction.category, latestTransaction.type),
+            date = latestTransaction.transactionDate,
+            totalCost = formatCompactCurrencyIraqiDinar(transactions.sumOf { it.amount }),
+            amountValue = transactions.sumOf { it.amount },
+            type = latestTransaction.type,
+            category = latestTransaction.category,
+            itemId = latestTransaction.transactionId,
+            year = year,
+            month = month,
+        )
+    }
+    .sortedWith(compareByDescending<SpendingItem> { it.date }.thenByDescending { it.itemId })
