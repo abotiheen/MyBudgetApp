@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -48,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
+import com.example.mybudgetapp.ui.theme.AppThemeMode
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.CloudBackupUiState
@@ -64,6 +67,7 @@ object CloudBackupDestination : NavigationDestination {
 fun CloudBackupScreen() {
     val viewModel: CloudBackupViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState by viewModel.uiState.collectAsState()
+    val systemDarkTheme = isSystemInDarkTheme()
     var pendingRestoreUri by rememberSaveable { mutableStateOf<String?>(null) }
     val restoreLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -81,8 +85,10 @@ fun CloudBackupScreen() {
         BudgetBackdrop(modifier = Modifier.padding(innerPadding)) {
             CloudBackupBody(
                 uiState = uiState,
+                systemDarkTheme = systemDarkTheme,
                 onSignIn = viewModel::signIn,
                 onSignUp = viewModel::signUp,
+                onThemeSelected = viewModel::selectDarkMode,
                 onExportJson = viewModel::exportJsonBackup,
                 onRestoreJson = { restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
                 onExportSpreadsheet = viewModel::exportSpreadsheet,
@@ -114,8 +120,10 @@ fun CloudBackupScreen() {
 private fun CloudBackupBody(
     modifier: Modifier = Modifier,
     uiState: CloudBackupUiState,
+    systemDarkTheme: Boolean,
     onSignIn: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
+    onThemeSelected: (Boolean) -> Unit,
     onExportJson: () -> Unit,
     onRestoreJson: () -> Unit,
     onExportSpreadsheet: () -> Unit,
@@ -143,6 +151,14 @@ private fun CloudBackupBody(
     ) {
         item {
             VaultHeroCard(uiState = uiState)
+        }
+        item {
+            AppearanceCard(
+                selectedMode = uiState.themeMode,
+                systemDarkTheme = systemDarkTheme,
+                enabled = !uiState.isBusy,
+                onThemeSelected = onThemeSelected,
+            )
         }
 
         item {
@@ -223,6 +239,80 @@ private fun CloudBackupBody(
             },
             onDismiss = { pendingAction = null },
         )
+    }
+}
+
+@Composable
+private fun AppearanceCard(
+    selectedMode: AppThemeMode,
+    systemDarkTheme: Boolean,
+    enabled: Boolean,
+    onThemeSelected: (Boolean) -> Unit,
+) {
+    val isDarkSelected = when (selectedMode) {
+        AppThemeMode.System -> systemDarkTheme
+        AppThemeMode.Light -> false
+        AppThemeMode.Dark -> true
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            SectionHeading(
+                title = "Appearance",
+                subtitle = "Use a darker surface palette across the app.",
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
+                shape = RoundedCornerShape(BudgetTheme.radii.lg),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = BudgetTheme.spacing.lg,
+                            vertical = BudgetTheme.spacing.md,
+                        ),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "Dark mode",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = if (isDarkSelected) "Enabled" else "Disabled",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = isDarkSelected,
+                        onCheckedChange = { onThemeSelected(it) },
+                        enabled = enabled,
+                    )
+                }
+            }
+            if (selectedMode == AppThemeMode.System) {
+                Text(
+                    text = "The app was previously following the system setting. This switch now controls it directly.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

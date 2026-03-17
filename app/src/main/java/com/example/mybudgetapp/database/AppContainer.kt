@@ -11,6 +11,8 @@ import com.example.mybudgetapp.cloud.LocalJsonBackupRepository
 import com.example.mybudgetapp.cloud.LocalSpreadsheetExportRepository
 import com.example.mybudgetapp.cloud.SupabaseAuthRepository
 import com.example.mybudgetapp.cloud.SupabaseCloudBackupRepository
+import com.example.mybudgetapp.ui.theme.SharedPreferencesThemePreferenceRepository
+import com.example.mybudgetapp.ui.theme.ThemePreferenceRepository
 
 interface AppContainer {
     val itemRepository: ItemRepository
@@ -18,6 +20,7 @@ interface AppContainer {
     val cloudBackupRepository: CloudBackupRepository
     val localSpreadsheetExportRepository: LocalSpreadsheetExportRepository
     val localJsonBackupRepository: LocalJsonBackupRepository
+    val themePreferenceRepository: ThemePreferenceRepository
 }
 
 class AppDataContainer(context: Context) : AppContainer {
@@ -64,5 +67,9 @@ class AppDataContainer(context: Context) : AppContainer {
             context = context,
             localDataSource = cloudBackupLocalDataSource,
         )
+    }
+
+    override val themePreferenceRepository: ThemePreferenceRepository by lazy {
+        SharedPreferencesThemePreferenceRepository(context)
     }
 }

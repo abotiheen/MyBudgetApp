@@ -64,6 +64,7 @@ object AppViewModelProvider {
                 budgetApplication().container.cloudBackupRepository,
                 budgetApplication().container.localSpreadsheetExportRepository,
                 budgetApplication().container.localJsonBackupRepository,
+                budgetApplication().container.themePreferenceRepository,
             )
         }
         initializer {
