@@ -60,8 +60,6 @@ object AppViewModelProvider {
         }
         initializer {
             CloudBackupViewModel(
-                budgetApplication().container.cloudAuthRepository,
-                budgetApplication().container.cloudBackupRepository,
                 budgetApplication().container.localSpreadsheetExportRepository,
                 budgetApplication().container.localJsonBackupRepository,
                 budgetApplication().container.themePreferenceRepository,

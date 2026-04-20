@@ -22,6 +22,7 @@ class CloudBackupLocalDataSource(
     suspend fun importSnapshot(snapshot: BackupSnapshot) {
         val transactionsToImport = when {
             snapshot.transactions.isNotEmpty() -> snapshot.transactions
+            // Keep support for older backup files that used the pre-v4 item/purchase structure.
             snapshot.items.isNotEmpty() && snapshot.purchases.isNotEmpty() -> snapshot.toTransactions()
             else -> emptyList()
         }

@@ -93,11 +93,12 @@ abstract class BudgetDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): BudgetDatabase {
             return instance ?: synchronized(this) {
+                // Keep the on-device database intact across updates. Add explicit migrations for any
+                // future schema change instead of falling back to destructive recreation.
                 Room.databaseBuilder(context, BudgetDatabase::class.java, "test_database")
                     .addMigrations(MIGRATION_3_4)
                     .addMigrations(MIGRATION_4_5)
                     .addCallback(databaseCallback)
-                    .fallbackToDestructiveMigration()
                     .build().also { instance = it }
             }
         }

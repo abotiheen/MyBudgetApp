@@ -1,21 +1,12 @@
 
 @file:Suppress("UnstableApiUsage")
 
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp") version "2.0.0-1.0.22"
-}
-
-val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        localPropertiesFile.inputStream().use(::load)
-    }
 }
 
 android {
@@ -28,21 +19,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-        buildConfigField(
-            "String",
-            "SUPABASE_URL",
-            "\"${localProperties.getProperty("SUPABASE_URL", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "SUPABASE_ANON_KEY",
-            "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "SUPABASE_DELETE_ACCOUNT_URL",
-            "\"${localProperties.getProperty("SUPABASE_DELETE_ACCOUNT_URL", "")}\""
-        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -96,10 +72,6 @@ dependencies {
 
     //coil
     implementation(libs.coil.compose)
-
-    implementation(libs.ktor.client.android)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
 
     //Room
