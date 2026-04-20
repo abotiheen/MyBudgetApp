@@ -37,6 +37,7 @@ import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.HomeTransactionPreview
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
@@ -487,24 +488,12 @@ private fun DashboardLaneRow(
                 color = lane.accent,
             )
         }
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(BudgetTheme.radii.pill),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedProgress.value)
-                        .height(8.dp)
-                        .background(lane.accent)
-                )
-            }
-        }
+        FractionProgressBar(
+            progress = animatedProgress.value,
+            fillColor = lane.accent,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            barHeight = 8.dp,
+        )
     }
 }
 

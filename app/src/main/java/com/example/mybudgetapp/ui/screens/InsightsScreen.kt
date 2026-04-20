@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -57,6 +56,7 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 import com.example.mybudgetapp.ui.widgets.categoryIconPainter
@@ -685,20 +685,12 @@ private fun InsightProgressBar(
         label = "insightProgress",
     )
 
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(BudgetTheme.radii.pill),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(10.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(animatedProgress.value)
-                .height(10.dp)
-                .background(accent)
-        )
-    }
+    FractionProgressBar(
+        progress = animatedProgress.value,
+        fillColor = accent,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        barHeight = 10.dp,
+    )
 }
 
 @Composable
