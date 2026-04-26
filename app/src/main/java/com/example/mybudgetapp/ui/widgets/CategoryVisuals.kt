@@ -14,13 +14,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import com.example.mybudgetapp.database.CATEGORY_KEY_FOOD
 import com.example.mybudgetapp.database.CATEGORY_KEY_INCOME
 import com.example.mybudgetapp.database.CATEGORY_KEY_OTHERS
 import com.example.mybudgetapp.database.CATEGORY_KEY_TRANSPORTATION
 import com.example.mybudgetapp.ui.theme.BudgetTheme
+import com.example.mybudgetapp.ui.theme.surfaceDark
+import com.example.mybudgetapp.ui.theme.surfaceLight
+import java.util.Locale
 
 data class CategoryIconChoice(
     val key: String,
@@ -38,7 +43,7 @@ data class CategoryColorOption(
 )
 
 const val defaultCategoryIconKey = "misc"
-const val defaultCategoryColorHex = "#5EBB4A"
+const val defaultCategoryColorHex = "#34944C"
 
 val categoryIconChoices = listOf(
     CategoryIconChoice("misc", "General", "category", "Essentials", listOf("misc", "other", "others", "general", "default")),
@@ -205,6 +210,16 @@ val categoryIconChoices = listOf(
     CategoryIconChoice("globe", "Global", "public", "Entertainment & Tech", listOf("world", "internet")),
     CategoryIconChoice("events", "Events", "event", "Entertainment & Tech", listOf("ticket", "show")),
     CategoryIconChoice("sports", "Sports", "sports_soccer", "Entertainment & Tech", listOf("games", "activity")),
+    CategoryIconChoice("cake", "Cake", "cake", "Entertainment & Tech", listOf("birthday", "dessert")),
+    CategoryIconChoice("mall", "Mall", "local_mall", "Shopping & Lifestyle", listOf("shopping center", "retail")),
+    CategoryIconChoice("science", "Science", "science", "Health & Family", listOf("lab", "study")),
+    CategoryIconChoice("laptop", "Laptop", "laptop_mac", "Entertainment & Tech", listOf("computer", "work")),
+    CategoryIconChoice("toys", "Toys", "toys", "Health & Family", listOf("kids", "play")),
+    CategoryIconChoice("umbrella", "Umbrella", "umbrella", "Transport & Travel", listOf("rain", "weather")),
+    CategoryIconChoice("baby", "Baby", "stroller", "Health & Family", listOf("child", "infant")),
+    CategoryIconChoice("dentist", "Dentist", "dentistry", "Health & Family", listOf("teeth", "clinic")),
+    CategoryIconChoice("mailbox", "Mailbox", "mail", "Work & Finance", listOf("post", "letters")),
+    CategoryIconChoice("delivery", "Delivery", "local_shipping", "Transport & Travel", listOf("courier", "shipping")),
 )
 
 private val categoryIconAliases = mapOf(
@@ -254,6 +269,21 @@ private val categoryIconAliases = mapOf(
 )
 
 private val categoryIconChoiceByKey = categoryIconChoices.associateBy { it.key }
+private val categoryIconSearchIndexByKey = categoryIconChoices.associate { choice ->
+    choice.key to buildString {
+        append(choice.label.lowercase())
+        append(' ')
+        append(choice.key.lowercase())
+        append(' ')
+        append(choice.ligature.lowercase())
+        append(' ')
+        append(choice.group.lowercase())
+        choice.keywords.forEach {
+            append(' ')
+            append(it.lowercase())
+        }
+    }
+}
 
 private fun fallbackIconKey(fallbackCategoryKey: String): String = when (fallbackCategoryKey) {
     CATEGORY_KEY_FOOD -> "food"
@@ -280,77 +310,138 @@ fun matchesCategoryIconChoice(
 ): Boolean {
     if (query.isBlank()) return true
     val normalizedQuery = query.trim().lowercase()
-    return choice.label.lowercase().contains(normalizedQuery) ||
-        choice.key.lowercase().contains(normalizedQuery) ||
-        choice.ligature.lowercase().contains(normalizedQuery) ||
-        choice.group.lowercase().contains(normalizedQuery) ||
-        choice.keywords.any { it.lowercase().contains(normalizedQuery) }
+    return categoryIconSearchIndexByKey[choice.key]?.contains(normalizedQuery) == true
 }
 
-val categoryColorCatalog = listOf(
-    CategoryColorOption("#FFD6E7", "Rose 100", "Rose", listOf("pink", "light")),
-    CategoryColorOption("#FFAFCC", "Rose 200", "Rose", listOf("pink", "soft")),
-    CategoryColorOption("#FF5D8F", "Rose 500", "Rose", listOf("pink")),
-    CategoryColorOption("#E5383B", "Crimson 700", "Rose", listOf("red", "bold")),
-
-    CategoryColorOption("#FEE8D6", "Peach 100", "Orange", listOf("soft")),
-    CategoryColorOption("#EAAC8B", "Apricot 200", "Orange", listOf("warm")),
-    CategoryColorOption("#F4A261", "Apricot 400", "Orange", listOf("warm")),
-    CategoryColorOption("#F8961E", "Orange 600", "Orange", listOf("amber")),
-
-    CategoryColorOption("#FFF1C7", "Sun 100", "Yellow", listOf("light")),
-    CategoryColorOption("#FFD166", "Gold 200", "Yellow", listOf("sand")),
-    CategoryColorOption("#F9C74F", "Gold 400", "Yellow", listOf("bright")),
-    CategoryColorOption("#E9C46A", "Amber 500", "Yellow", listOf("mustard")),
-
-    CategoryColorOption("#D8F3DC", "Mint 100", "Green", listOf("soft")),
-    CategoryColorOption("#A3B18A", "Moss 200", "Green", listOf("sage")),
-    CategoryColorOption(defaultCategoryColorHex, "Green 400", "Green", listOf("default")),
-    CategoryColorOption("#52B788", "Green 500", "Green", listOf("leaf")),
-    CategoryColorOption("#386641", "Green 700", "Green", listOf("forest")),
-
-    CategoryColorOption("#D6F5F3", "Aqua 100", "Teal", listOf("light")),
-    CategoryColorOption("#64DFDF", "Aqua 300", "Teal", listOf("fresh")),
-    CategoryColorOption("#43AA8B", "Teal 500", "Teal", listOf("sea")),
-    CategoryColorOption("#0FA3B1", "Teal 700", "Teal", listOf("deep")),
-
-    CategoryColorOption("#E4F2FF", "Sky 100", "Blue", listOf("light")),
-    CategoryColorOption("#BDE0FE", "Sky 200", "Blue", listOf("soft")),
-    CategoryColorOption("#A2D2FF", "Sky 300", "Blue", listOf("airy")),
-    CategoryColorOption("#4EA8DE", "Blue 500", "Blue", listOf("ocean")),
-    CategoryColorOption("#22577A", "Blue 800", "Blue", listOf("navy")),
-
-    CategoryColorOption("#E3E6FF", "Periwinkle 100", "Indigo", listOf("soft")),
-    CategoryColorOption("#B8C0FF", "Periwinkle 200", "Indigo", listOf("light")),
-    CategoryColorOption("#5C6BC0", "Indigo 500", "Indigo", listOf("royal")),
-    CategoryColorOption("#4361EE", "Indigo 600", "Indigo", listOf("vivid")),
-    CategoryColorOption("#1D3557", "Indigo 900", "Indigo", listOf("dark")),
-
-    CategoryColorOption("#F0E5FF", "Lilac 100", "Purple", listOf("light")),
-    CategoryColorOption("#CDB4DB", "Lilac 200", "Purple", listOf("soft")),
-    CategoryColorOption("#9D4EDD", "Purple 500", "Purple", listOf("violet")),
-    CategoryColorOption("#6930C3", "Purple 700", "Purple", listOf("deep")),
-
-    CategoryColorOption("#FFE3F2", "Blush 100", "Pink", listOf("soft")),
-    CategoryColorOption("#FFC6FF", "Blush 200", "Pink", listOf("light")),
-    CategoryColorOption("#F72585", "Pink 600", "Pink", listOf("bold")),
-    CategoryColorOption("#B5179E", "Pink 800", "Pink", listOf("magenta")),
-
-    CategoryColorOption("#EAD9CB", "Sand 200", "Brown", listOf("beige")),
-    CategoryColorOption("#D4A373", "Sand 400", "Brown", listOf("tan")),
-    CategoryColorOption("#8D6E63", "Brown 600", "Brown", listOf("earth")),
-    CategoryColorOption("#7F5539", "Brown 800", "Brown", listOf("espresso")),
-
-    CategoryColorOption("#ECEAF3", "Mist 100", "Slate", listOf("light")),
-    CategoryColorOption("#CBC0D3", "Mist 200", "Slate", listOf("soft")),
-    CategoryColorOption("#8E9AAF", "Slate 500", "Slate", listOf("gray")),
-    CategoryColorOption("#577590", "Slate 700", "Slate", listOf("steel")),
+private data class CategoryColorFamily(
+    val name: String,
+    val hue: Float,
+    val keywords: List<String>,
+    val monochrome: Boolean = false,
 )
 
-val categoryColorChoices = categoryColorCatalog.map { it.hex }
+private val categoryColorFamilies = listOf(
+    CategoryColorFamily("Rose", 350f, listOf("red", "rose")),
+    CategoryColorFamily("Pink", 330f, listOf("pink", "magenta")),
+    CategoryColorFamily("Purple", 285f, listOf("purple", "violet")),
+    CategoryColorFamily("Indigo", 220f, listOf("indigo", "periwinkle")),
+    CategoryColorFamily("Blue", 205f, listOf("blue", "azure")),
+    CategoryColorFamily("Cyan", 195f, listOf("cyan", "sky")),
+    CategoryColorFamily("Teal", 170f, listOf("teal", "aqua")),
+    CategoryColorFamily("Green", 135f, listOf("green", "emerald")),
+    CategoryColorFamily("Orange", 20f, listOf("orange", "coral")),
+    CategoryColorFamily("Amber", 40f, listOf("amber", "gold")),
+)
+
+private val lightSurfaceArgb = surfaceLight.toArgb()
+private val darkSurfaceArgb = surfaceDark.toArgb()
+private val categoryPaletteSaturations = (45..90 step 5).map { it / 100f }
+private val categoryPaletteValues = (50..90 step 4).map { it / 100f }
+
+private fun relativeLuminance(argb: Int): Double {
+    fun channel(component: Int): Double {
+        val normalized = component / 255.0
+        return if (normalized <= 0.03928) {
+            normalized / 12.92
+        } else {
+            Math.pow((normalized + 0.055) / 1.055, 2.4)
+        }
+    }
+
+    val red = channel(AndroidColor.red(argb))
+    val green = channel(AndroidColor.green(argb))
+    val blue = channel(AndroidColor.blue(argb))
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+}
+
+private fun contrastRatio(firstArgb: Int, secondArgb: Int): Double {
+    val first = relativeLuminance(firstArgb)
+    val second = relativeLuminance(secondArgb)
+    val lighter = maxOf(first, second)
+    val darker = minOf(first, second)
+    return (lighter + 0.05) / (darker + 0.05)
+}
+
+private fun isContrastSafeCategoryColor(option: CategoryColorOption): Boolean {
+    val colorArgb = runCatching { AndroidColor.parseColor(option.hex) }.getOrNull() ?: return false
+    val lightContrast = contrastRatio(colorArgb, lightSurfaceArgb)
+    val darkContrast = contrastRatio(colorArgb, darkSurfaceArgb)
+    return minOf(lightContrast, darkContrast) >= 3.0
+}
+
+private fun colorIntToHex(colorInt: Int): String =
+    String.format(Locale.US, "#%06X", 0xFFFFFF and colorInt)
+
+private fun hsvOf(hex: String): FloatArray =
+    FloatArray(3).also { hsv ->
+        AndroidColor.colorToHSV(hex.toColorInt(), hsv)
+    }
+
+private fun sampleTenColors(options: List<CategoryColorOption>): List<CategoryColorOption> {
+    require(options.size >= 10) { "Expected at least 10 options per family, got ${options.size}" }
+    return List(10) { index ->
+        val selectedIndex = ((options.lastIndex.toFloat() * index) / 9f).toInt()
+        options[selectedIndex]
+    }
+}
+
+private fun generateColorFamilyOptions(family: CategoryColorFamily): List<CategoryColorOption> {
+    val candidates = buildList {
+        if (family.monochrome) {
+            // Reserved for future neutral families if needed.
+            return@buildList
+        }
+        categoryPaletteSaturations.forEach { saturation ->
+            categoryPaletteValues.forEach { value ->
+                val colorInt = AndroidColor.HSVToColor(floatArrayOf(family.hue, saturation, value))
+                add(
+                    CategoryColorOption(
+                        hex = colorIntToHex(colorInt),
+                        label = "",
+                        family = family.name,
+                        keywords = family.keywords,
+                    )
+                )
+            }
+        }
+    }
+        .filter(::isContrastSafeCategoryColor)
+        .distinctBy { it.hex }
+        .sortedWith(
+            compareBy<CategoryColorOption>(
+                { hsvOf(it.hex)[2] },
+                { -hsvOf(it.hex)[1] },
+                { it.hex },
+            )
+        )
+
+    return sampleTenColors(candidates).mapIndexed { index, option ->
+        option.copy(
+            label = "${family.name} ${index + 1}",
+            keywords = option.keywords + listOf("palette", "shade ${index + 1}"),
+        )
+    }
+}
+
+val categoryColorCatalog = categoryColorFamilies.flatMap(::generateColorFamilyOptions)
+
+private val categoryColorOptionByNormalizedHex = categoryColorCatalog.associateBy { it.hex.lowercase() }
+private val categoryColorSearchIndexByHex = categoryColorCatalog.associate { option ->
+    option.hex to buildString {
+        append(option.label.lowercase())
+        append(' ')
+        append(option.family.lowercase())
+        append(' ')
+        append(option.hex.lowercase())
+        option.keywords.forEach {
+            append(' ')
+            append(it.lowercase())
+        }
+    }
+}
 
 fun resolveCategoryColorOption(colorHex: String): CategoryColorOption? =
-    categoryColorCatalog.firstOrNull { it.hex.equals(colorHex, ignoreCase = true) }
+    categoryColorOptionByNormalizedHex[colorHex.trim().lowercase()]
 
 fun matchesCategoryColorOption(
     option: CategoryColorOption,
@@ -358,10 +449,7 @@ fun matchesCategoryColorOption(
 ): Boolean {
     if (query.isBlank()) return true
     val normalizedQuery = query.trim().lowercase()
-    return option.label.lowercase().contains(normalizedQuery) ||
-        option.family.lowercase().contains(normalizedQuery) ||
-        option.hex.lowercase().contains(normalizedQuery) ||
-        option.keywords.any { it.lowercase().contains(normalizedQuery) }
+    return categoryColorSearchIndexByHex[option.hex]?.contains(normalizedQuery) == true
 }
 
 private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol) {
@@ -374,7 +462,7 @@ private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol)
     "timeline" -> Icons.Filled.Timeline
     "settings" -> Icons.Filled.Settings
     "info" -> Icons.Filled.Info
-    "help" -> Icons.Filled.Help
+    "help" -> Icons.Filled.SupportAgent
     "call" -> Icons.Filled.Call
     "email" -> Icons.Filled.Email
     "send" -> Icons.AutoMirrored.Filled.Send
@@ -384,7 +472,7 @@ private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol)
     "more_vert" -> Icons.Filled.MoreVert
     "camera_alt" -> Icons.Filled.CameraAlt
     "photo_library" -> Icons.Filled.PhotoLibrary
-    "event_note" -> Icons.Filled.EventNote
+    "event_note" -> Icons.Filled.Event
     "build" -> Icons.Filled.Build
     "map" -> Icons.Filled.Map
     "history" -> Icons.Filled.History
@@ -432,7 +520,7 @@ private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol)
     "handyman" -> Icons.Filled.Handyman
     "construction" -> Icons.Filled.Construction
     "shield" -> Icons.Filled.Shield
-    "receipt_long" -> Icons.Filled.ReceiptLong
+    "receipt_long" -> Icons.Filled.Receipt
     "directions_car" -> Icons.Filled.DirectionsCar
     "local_taxi" -> Icons.Filled.LocalTaxi
     "two_wheeler" -> Icons.Filled.TwoWheeler
@@ -476,13 +564,13 @@ private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol)
     "child_care" -> Icons.Filled.ChildCare
     "family_restroom" -> Icons.Filled.FamilyRestroom
     "school" -> Icons.Filled.School
-    "menu_book" -> Icons.Filled.MenuBook
+    "menu_book" -> Icons.Filled.AutoStories
     "local_library" -> Icons.Filled.LocalLibrary
     "volunteer_activism" -> Icons.Filled.VolunteerActivism
     "sports_soccer" -> Icons.Filled.SportsSoccer
     "sports_basketball" -> Icons.Filled.SportsBasketball
     "sports_tennis" -> Icons.Filled.SportsTennis
-    "directions_run" -> Icons.Filled.DirectionsRun
+    "directions_run" -> Icons.Filled.Hiking
     "church" -> Icons.Filled.AutoStories
     "payments" -> Icons.Filled.Payments
     "account_balance_wallet" -> Icons.Filled.AccountBalanceWallet
@@ -494,8 +582,8 @@ private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol)
     "paid" -> Icons.Filled.Paid
     "work" -> Icons.Filled.Work
     "business_center" -> Icons.Filled.BusinessCenter
-    "trending_up" -> Icons.Filled.TrendingUp
-    "show_chart" -> Icons.Filled.ShowChart
+    "trending_up" -> Icons.Filled.Insights
+    "show_chart" -> Icons.Filled.QueryStats
     "pie_chart" -> Icons.Filled.PieChart
     "calculate" -> Icons.Filled.Calculate
     "edit" -> Icons.Filled.Edit
@@ -515,6 +603,16 @@ private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol)
     "hiking" -> Icons.Filled.Hiking
     "public" -> Icons.Filled.Public
     "event" -> Icons.Filled.Event
+    "cake" -> Icons.Filled.Cake
+    "local_mall" -> Icons.Filled.LocalMall
+    "science" -> Icons.Filled.Science
+    "laptop_mac" -> Icons.Filled.LaptopMac
+    "toys" -> Icons.Filled.Toys
+    "umbrella" -> Icons.Filled.Umbrella
+    "stroller" -> Icons.Filled.Stroller
+    "dentistry" -> Icons.Filled.MedicalServices
+    "mail" -> Icons.Filled.Mail
+    "local_shipping" -> Icons.Filled.LocalShipping
     else -> Icons.Filled.Category
 }
 
@@ -560,5 +658,5 @@ fun categoryAccentColor(
         CATEGORY_KEY_INCOME -> BudgetTheme.extendedColors.income
         else -> MaterialTheme.colorScheme.primary
     }
-    return runCatching { Color(AndroidColor.parseColor(colorHex)) }.getOrElse { fallback }
+    return runCatching { Color(colorHex.toColorInt()) }.getOrElse { fallback }
 }

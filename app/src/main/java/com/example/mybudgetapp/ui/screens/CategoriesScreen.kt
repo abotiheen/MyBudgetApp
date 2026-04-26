@@ -1,22 +1,32 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,19 +34,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -57,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -79,6 +95,8 @@ import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import com.example.mybudgetapp.ui.widgets.CategoryColorOption
+import com.example.mybudgetapp.ui.widgets.CategoryIconChoice
 import com.example.mybudgetapp.ui.widgets.categoryColorCatalog
 import com.example.mybudgetapp.ui.widgets.categoryIconChoices
 import com.example.mybudgetapp.ui.widgets.defaultCategoryColorHex
@@ -421,6 +439,12 @@ private fun CategoryRow(
     }
 }
 
+private enum class AddCategoryPickerNav {
+    Main,
+    Icons,
+    Colors,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddCategoryBottomSheet(
@@ -439,6 +463,9 @@ private fun AddCategoryBottomSheet(
             )
         )
     }
+    var nav by rememberSaveable { mutableStateOf(AddCategoryPickerNav.Main) }
+    var iconQuery by rememberSaveable { mutableStateOf("") }
+    var colorQuery by rememberSaveable { mutableStateOf("") }
 
     fun dismissSheet(action: () -> Unit = {}) {
         coroutineScope.launch {
@@ -453,6 +480,10 @@ private fun AddCategoryBottomSheet(
     LaunchedEffect(Unit) {
         sheetContentVisible = true
         sheetState.show()
+    }
+
+    BackHandler(enabled = nav != AddCategoryPickerNav.Main) {
+        nav = AddCategoryPickerNav.Main
     }
 
     ModalBottomSheet(
@@ -474,233 +505,504 @@ private fun AddCategoryBottomSheet(
                 ),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = BudgetTheme.spacing.xl, vertical = BudgetTheme.spacing.md),
-                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    text = "Add category",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                AddCategorySheetHeader(
+                    nav = nav,
+                    onBack = { nav = AddCategoryPickerNav.Main },
+                    onClose = { dismissSheet() },
                 )
-                Text(
-                    text = "Choose a type, icon, and color. The key will be generated automatically from the name.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    value = draft.name,
-                    onValueChange = { draft = draft.copy(name = it) },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                )
-                AnimatedSegmentedControl(
-                    selectedIndex = if (draft.type == TRANSACTION_TYPE_EXPENSE) 0 else 1,
-                    itemCount = 2,
-                    onItemSelected = { index ->
-                        draft = draft.copy(type = if (index == 0) TRANSACTION_TYPE_EXPENSE else TRANSACTION_TYPE_INCOME)
-                    },
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-                    indicatorColor = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(BudgetTheme.radii.pill),
-                    itemShape = RoundedCornerShape(BudgetTheme.radii.pill),
-                    shadowElevation = BudgetTheme.elevations.level2,
-                    itemSpacing = 6.dp,
-                    itemMinHeight = 46.dp,
-                ) { index, selected ->
-                    SegmentedTextLabel(
-                        text = if (index == 0) "Expense" else "Income",
-                        selected = selected,
-                    )
-                }
-                Text(
-                    text = "Icon",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                IconDropdownField(
-                    selectedIconKey = draft.iconKey,
-                    accent = categoryAccentColor(draft.colorHex),
-                    onIconSelected = { draft = draft.copy(iconKey = it) },
-                )
-                Text(
-                    text = "Color",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                ColorDropdownField(
-                    selectedColorHex = draft.colorHex,
-                    onColorSelected = { draft = draft.copy(colorHex = it) },
-                )
-                Card(
-                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(BudgetTheme.spacing.md),
-                        horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val accent = categoryAccentColor(draft.colorHex)
-                        Surface(
-                            color = accent.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(BudgetTheme.radii.md),
-                        ) {
-                            Box(
-                                modifier = Modifier.size(48.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CategoryIcon(
-                                    iconKey = draft.iconKey,
-                                    tint = accent,
-                                    size = 24.dp,
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+
+                AnimatedContent(
+                    targetState = nav,
+                    label = "addCategoryPickerNav",
+                    transitionSpec = {
+                        val isForward = targetState != AddCategoryPickerNav.Main
+                        if (initialState == targetState) {
+                            EnterTransition.None togetherWith ExitTransition.None using SizeTransform(clip = false)
+                        } else {
+                            slideInHorizontally(
+                                initialOffsetX = { if (isForward) it else -it },
+                                animationSpec = tween(220),
+                            ).togetherWith(
+                                slideOutHorizontally(
+                                    targetOffsetX = { if (isForward) -it else it },
+                                    animationSpec = tween(220),
                                 )
-                            }
+                            ).using(SizeTransform(clip = false))
                         }
-                        Column {
-                            Text(
-                                text = draft.name.ifBlank { "Preview category" },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                    },
+                    contentKey = {
+                        when (it) {
+                            AddCategoryPickerNav.Main -> "main"
+                            AddCategoryPickerNav.Icons -> "icons"
+                            AddCategoryPickerNav.Colors -> "colors"
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { targetNav ->
+                    when (targetNav) {
+                        AddCategoryPickerNav.Main -> {
+                            AddCategoryMainContent(
+                                draft = draft,
+                                onDraftChange = { draft = it },
+                                onOpenIcons = { nav = AddCategoryPickerNav.Icons },
+                                onOpenColors = { nav = AddCategoryPickerNav.Colors },
                             )
-                            Text(
-                                text = if (draft.type == TRANSACTION_TYPE_EXPENSE) "Expense category" else "Income category",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        }
+
+                        AddCategoryPickerNav.Icons -> {
+                            IconPickerSubSheet(
+                                selectedIconKey = draft.iconKey,
+                                accent = categoryAccentColor(draft.colorHex),
+                                query = iconQuery,
+                                onQueryChange = { iconQuery = it },
+                                onIconSelected = {
+                                    draft = draft.copy(iconKey = it)
+                                },
+                            )
+                        }
+
+                        AddCategoryPickerNav.Colors -> {
+                            ColorPickerSubSheet(
+                                selectedColorHex = draft.colorHex,
+                                query = colorQuery,
+                                onQueryChange = { colorQuery = it },
+                                onColorSelected = {
+                                    draft = draft.copy(colorHex = it)
+                                },
                             )
                         }
                     }
                 }
-                Button(
-                    onClick = { onSaveCategory(draft) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                ) {
-                    Text("Save category")
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+
+                if (nav == AddCategoryPickerNav.Main) {
+                    Button(
+                        onClick = { onSaveCategory(draft) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = BudgetTheme.spacing.xl, vertical = BudgetTheme.spacing.md)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                    ) {
+                        Text("Save category")
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun IconDropdownField(
+private fun AddCategorySheetHeader(
+    nav: AddCategoryPickerNav,
+    onBack: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = BudgetTheme.spacing.md, vertical = BudgetTheme.spacing.sm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.xs),
+        ) {
+            if (nav != AddCategoryPickerNav.Main) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                    )
+                }
+            }
+            Text(
+                text = when (nav) {
+                    AddCategoryPickerNav.Main -> "Add category"
+                    AddCategoryPickerNav.Icons -> "Choose icon"
+                    AddCategoryPickerNav.Colors -> "Choose color"
+                },
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        IconButton(onClick = onClose) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = null,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AddCategoryMainContent(
+    draft: CategoryDraft,
+    onDraftChange: (CategoryDraft) -> Unit,
+    onOpenIcons: () -> Unit,
+    onOpenColors: () -> Unit,
+) {
+    val accent = categoryAccentColor(draft.colorHex)
+    val quickIcons = remember { categoryIconChoices.take(10) }
+    val quickColors = remember { categoryColorCatalog.take(16) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = BudgetTheme.spacing.xl, vertical = BudgetTheme.spacing.md),
+        verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+    ) {
+        Text(
+            text = "Choose a type, icon, and color. The key will be generated automatically from the name.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = draft.name,
+            onValueChange = { onDraftChange(draft.copy(name = it)) },
+            label = { Text("Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        )
+        AnimatedSegmentedControl(
+            selectedIndex = if (draft.type == TRANSACTION_TYPE_EXPENSE) 0 else 1,
+            itemCount = 2,
+            onItemSelected = { index ->
+                onDraftChange(
+                    draft.copy(type = if (index == 0) TRANSACTION_TYPE_EXPENSE else TRANSACTION_TYPE_INCOME)
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+            indicatorColor = MaterialTheme.colorScheme.primary,
+            shape = RoundedCornerShape(BudgetTheme.radii.pill),
+            itemShape = RoundedCornerShape(BudgetTheme.radii.pill),
+            shadowElevation = BudgetTheme.elevations.level2,
+            itemSpacing = 6.dp,
+            itemMinHeight = 46.dp,
+        ) { index, selected ->
+            SegmentedTextLabel(
+                text = if (index == 0) "Expense" else "Income",
+                selected = selected,
+            )
+        }
+
+        SelectionSectionCard(
+            title = "Icon",
+            selectedLabel = resolveCategoryIconChoice(draft.iconKey).label,
+            onSeeAll = onOpenIcons,
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            ) {
+                quickIcons.forEach { choice ->
+                    QuickIconOption(
+                        choice = choice,
+                        selected = draft.iconKey == choice.key,
+                        accent = accent,
+                        onClick = { onDraftChange(draft.copy(iconKey = choice.key)) },
+                    )
+                }
+            }
+        }
+
+        SelectionSectionCard(
+            title = "Color",
+            selectedLabel = resolveCategoryColorOption(draft.colorHex)?.label ?: draft.colorHex,
+            onSeeAll = onOpenColors,
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            ) {
+                quickColors.forEach { option ->
+                    QuickColorOption(
+                        option = option,
+                        selected = draft.colorHex.equals(option.hex, ignoreCase = true),
+                        onClick = { onDraftChange(draft.copy(colorHex = option.hex)) },
+                    )
+                }
+            }
+        }
+
+        Card(
+            shape = RoundedCornerShape(BudgetTheme.radii.lg),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(BudgetTheme.spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    color = accent.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.md),
+                ) {
+                    Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CategoryIcon(
+                            iconKey = draft.iconKey,
+                            tint = accent,
+                            size = 24.dp,
+                        )
+                    }
+                }
+                Column {
+                    Text(
+                        text = draft.name.ifBlank { "Preview category" },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (draft.type == TRANSACTION_TYPE_EXPENSE) "Expense category" else "Income category",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectionSectionCard(
+    title: String,
+    selectedLabel: String,
+    onSeeAll: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(BudgetTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = selectedLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Surface(
+                    onClick = onSeeAll,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.74f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.pill),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "See all",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun QuickIconOption(
+    choice: CategoryIconChoice,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        color = if (selected) accent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(BudgetTheme.radii.md),
+        border = if (selected) BorderStroke(1.dp, accent.copy(alpha = 0.34f)) else null,
+    ) {
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            CategoryIcon(
+                iconKey = choice.key,
+                tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                size = 20.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickColorOption(
+    option: CategoryColorOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    ColorSwatch(
+        option = option,
+        selected = selected,
+        size = 34.dp,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun QuickIconOptionSubSheet(
+    choice: CategoryIconChoice,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        color = if (selected) accent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(BudgetTheme.radii.md),
+        border = if (selected) BorderStroke(1.dp, accent.copy(alpha = 0.34f)) else null,
+    ) {
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            CategoryIcon(
+                iconKey = choice.key,
+                tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                size = 24.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickColorOptionSubSheet(
+    option: CategoryColorOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    ColorSwatch(
+        option = option,
+        selected = selected,
+        size = 42.dp,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun ColorSwatch(
+    option: CategoryColorOption,
+    selected: Boolean,
+    size: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+) {
+    val fillColor = categoryAccentColor(option.hex)
+    val strokeColor = if (selected) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.82f)
+    }
+    val strokeWidth = if (selected) 2.5.dp else 1.25.dp
+    val inset = if (selected) 2.dp else 1.dp
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.size(size)) {
+            val strokePx = strokeWidth.toPx()
+            val insetPx = inset.toPx() + strokePx / 2f
+            val radius = this.size.minDimension / 2f - insetPx
+            drawCircle(
+                color = fillColor,
+                radius = radius,
+            )
+            drawCircle(
+                color = strokeColor,
+                radius = radius,
+                style = Stroke(width = strokePx),
+            )
+        }
+    }
+}
+
+@Composable
+private fun IconPickerSubSheet(
     selectedIconKey: String,
     accent: Color,
+    query: String,
+    onQueryChange: (String) -> Unit,
     onIconSelected: (String) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-    val selectedChoice = resolveCategoryIconChoice(selectedIconKey)
     val filteredChoices = remember(query) {
         categoryIconChoices.filter { matchesCategoryIconChoice(it, query) }
     }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = BudgetTheme.spacing.xl, vertical = BudgetTheme.spacing.md),
+        verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
     ) {
         OutlinedTextField(
-            value = selectedChoice.label,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Icon") },
-            leadingIcon = {
-                CategoryIcon(
-                    iconKey = selectedChoice.key,
-                    tint = accent,
-                    size = 20.dp,
-                )
-            },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
+            value = query,
+            onValueChange = onQueryChange,
+            label = { Text("Search icons") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(BudgetTheme.radii.lg),
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.heightIn(max = 420.dp),
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 46.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = true),
+            horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
         ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Search icons") },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(BudgetTheme.radii.md),
-            )
-            if (filteredChoices.isEmpty()) {
-                DropdownMenuItem(
-                    text = { Text("No icons found") },
-                    onClick = {},
-                    enabled = false,
-                )
-            } else {
-                var previousGroup = ""
-                filteredChoices.forEach { choice ->
-                    if (choice.group != previousGroup) {
-                        previousGroup = choice.group
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = choice.group,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            onClick = {},
-                            enabled = false,
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Surface(
-                                    color = accent.copy(alpha = 0.12f),
-                                    shape = RoundedCornerShape(BudgetTheme.radii.sm),
-                                ) {
-                                    Box(
-                                        modifier = Modifier.size(32.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        CategoryIcon(
-                                            iconKey = choice.key,
-                                            tint = accent,
-                                            size = 18.dp,
-                                        )
-                                    }
-                                }
-                                Column {
-                                    Text(choice.label, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(
-                                        text = choice.group,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            onIconSelected(choice.key)
-                            expanded = false
-                            query = ""
-                        },
+            items(filteredChoices, key = { it.key }) { choice ->
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    QuickIconOptionSubSheet(
+                        choice = choice,
+                        selected = selectedIconKey == choice.key,
+                        accent = accent,
+                        onClick = { onIconSelected(choice.key) },
                     )
                 }
             }
@@ -708,108 +1010,48 @@ private fun IconDropdownField(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColorDropdownField(
+private fun ColorPickerSubSheet(
     selectedColorHex: String,
+    query: String,
+    onQueryChange: (String) -> Unit,
     onColorSelected: (String) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-    val selectedOption = resolveCategoryColorOption(selectedColorHex)
-    val selectedColor = categoryAccentColor(selectedColorHex)
     val filteredOptions = remember(query) {
         categoryColorCatalog.filter { matchesCategoryColorOption(it, query) }
     }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = BudgetTheme.spacing.xl, vertical = BudgetTheme.spacing.md),
+        verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
     ) {
         OutlinedTextField(
-            value = selectedOption?.label ?: selectedColorHex,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Color") },
-            leadingIcon = {
-                Surface(
-                    color = selectedColor,
-                    shape = CircleShape,
-                ) {
-                    Box(modifier = Modifier.size(18.dp))
-                }
-            },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
+            value = query,
+            onValueChange = onQueryChange,
+            label = { Text("Search colors") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(BudgetTheme.radii.lg),
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.heightIn(max = 360.dp),
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 48.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = true),
+            horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
         ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Search colors") },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(BudgetTheme.radii.md),
-            )
-            if (filteredOptions.isEmpty()) {
-                DropdownMenuItem(
-                    text = { Text("No colors found") },
-                    onClick = {},
-                    enabled = false,
-                )
-            } else {
-                var previousFamily = ""
-                filteredOptions.forEach { option ->
-                    if (option.family != previousFamily) {
-                        previousFamily = option.family
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = option.family,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            onClick = {},
-                            enabled = false,
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Surface(
-                                    color = categoryAccentColor(option.hex),
-                                    shape = CircleShape,
-                                ) {
-                                    Box(modifier = Modifier.size(20.dp))
-                                }
-                                Column {
-                                    Text(option.label, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(
-                                        text = option.hex,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            onColorSelected(option.hex)
-                            expanded = false
-                            query = ""
-                        },
+            items(filteredOptions, key = { it.hex }) { option ->
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    QuickColorOptionSubSheet(
+                        option = option,
+                        selected = selectedColorHex.equals(option.hex, ignoreCase = true),
+                        onClick = { onColorSelected(option.hex) },
                     )
                 }
             }
