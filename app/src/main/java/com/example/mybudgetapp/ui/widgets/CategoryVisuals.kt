@@ -1,6 +1,5 @@
 package com.example.mybudgetapp.ui.widgets
 
-import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -14,7 +13,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
@@ -23,9 +21,6 @@ import com.example.mybudgetapp.database.CATEGORY_KEY_INCOME
 import com.example.mybudgetapp.database.CATEGORY_KEY_OTHERS
 import com.example.mybudgetapp.database.CATEGORY_KEY_TRANSPORTATION
 import com.example.mybudgetapp.ui.theme.BudgetTheme
-import com.example.mybudgetapp.ui.theme.surfaceDark
-import com.example.mybudgetapp.ui.theme.surfaceLight
-import java.util.Locale
 
 data class CategoryIconChoice(
     val key: String,
@@ -313,117 +308,59 @@ fun matchesCategoryIconChoice(
     return categoryIconSearchIndexByKey[choice.key]?.contains(normalizedQuery) == true
 }
 
-private data class CategoryColorFamily(
-    val name: String,
-    val hue: Float,
+private fun colorOptions(
+    family: String,
+    keywords: List<String>,
+    hexes: List<String>,
+): List<CategoryColorOption> = hexes.mapIndexed { index, hex ->
+    CategoryColorOption(
+        hex = hex,
+        label = "$family ${index + 1}",
+        family = family,
+        keywords = keywords + listOf("palette", "tone ${index + 1}"),
+    )
+}
+
+private data class CategoryColorFamilyPalette(
+    val family: String,
     val keywords: List<String>,
-    val monochrome: Boolean = false,
+    val hexes: List<String>,
 )
 
 private val categoryColorFamilies = listOf(
-    CategoryColorFamily("Rose", 350f, listOf("red", "rose")),
-    CategoryColorFamily("Pink", 330f, listOf("pink", "magenta")),
-    CategoryColorFamily("Purple", 285f, listOf("purple", "violet")),
-    CategoryColorFamily("Indigo", 220f, listOf("indigo", "periwinkle")),
-    CategoryColorFamily("Blue", 205f, listOf("blue", "azure")),
-    CategoryColorFamily("Cyan", 195f, listOf("cyan", "sky")),
-    CategoryColorFamily("Teal", 170f, listOf("teal", "aqua")),
-    CategoryColorFamily("Green", 135f, listOf("green", "emerald")),
-    CategoryColorFamily("Orange", 20f, listOf("orange", "coral")),
-    CategoryColorFamily("Amber", 40f, listOf("amber", "gold")),
+    CategoryColorFamilyPalette("Red", listOf("red", "scarlet", "ruby"), listOf("#F87171", "#EF4444", "#DC2626", "#B91C1C", "#991B1B")),
+    CategoryColorFamilyPalette("Rose", listOf("rose", "crimson", "berry"), listOf("#FB7185", "#F43F5E", "#E11D48", "#BE123C", "#9F1239")),
+    CategoryColorFamilyPalette("Pink", listOf("pink", "blush", "bubblegum"), listOf("#F472B6", "#EC4899", "#DB2777", "#BE185D", "#9D174D")),
+    CategoryColorFamilyPalette("Fuchsia", listOf("fuchsia", "magenta", "orchid"), listOf("#E879F9", "#D946EF", "#C026D3", "#A21CAF", "#86198F")),
+    CategoryColorFamilyPalette("Purple", listOf("purple", "grape", "plum"), listOf("#C084FC", "#A855F7", "#9333EA", "#7E22CE", "#6B21A8")),
+    CategoryColorFamilyPalette("Violet", listOf("violet", "iris", "amethyst"), listOf("#A78BFA", "#8B5CF6", "#7C3AED", "#6D28D9", "#5B21B6")),
+    CategoryColorFamilyPalette("Indigo", listOf("indigo", "royal", "midnight"), listOf("#818CF8", "#6366F1", "#4F46E5", "#4338CA", "#3730A3")),
+    CategoryColorFamilyPalette("Blue", listOf("blue", "azure", "ocean"), listOf("#60A5FA", "#3B82F6", "#2563EB", "#1D4ED8", "#1E40AF")),
+    CategoryColorFamilyPalette("Sky", listOf("sky", "cerulean", "air"), listOf("#38BDF8", "#0EA5E9", "#0284C7", "#0369A1", "#075985")),
+    CategoryColorFamilyPalette("Cyan", listOf("cyan", "aqua", "glacier"), listOf("#22D3EE", "#06B6D4", "#0891B2", "#0E7490", "#155E75")),
+    CategoryColorFamilyPalette("Teal", listOf("teal", "sea", "lagoon"), listOf("#2DD4BF", "#14B8A6", "#0D9488", "#0F766E", "#115E59")),
+    CategoryColorFamilyPalette("Emerald", listOf("emerald", "mint", "jade"), listOf("#34D399", "#10B981", "#059669", "#047857", "#065F46")),
+    CategoryColorFamilyPalette("Green", listOf("green", "leaf", "forest"), listOf("#4ADE80", "#22C55E", "#16A34A", "#15803D", "#166534")),
+    CategoryColorFamilyPalette("Lime", listOf("lime", "chartreuse", "zest"), listOf("#A3E635", "#84CC16", "#65A30D", "#4D7C0F", "#3F6212")),
+    CategoryColorFamilyPalette("Yellow", listOf("yellow", "lemon", "sun"), listOf("#FACC15", "#EAB308", "#CA8A04", "#A16207", "#854D0E")),
+    CategoryColorFamilyPalette("Amber", listOf("amber", "honey", "gold"), listOf("#FBBF24", "#F59E0B", "#D97706", "#B45309", "#92400E")),
+    CategoryColorFamilyPalette("Orange", listOf("orange", "tangerine", "citrus"), listOf("#FB923C", "#F97316", "#EA580C", "#C2410C", "#9A3412")),
+    CategoryColorFamilyPalette("Coral", listOf("coral", "salmon", "peach"), listOf("#FF8A80", "#FF6F61", "#F95D6A", "#E76F51", "#D65A31")),
+    CategoryColorFamilyPalette("Copper", listOf("copper", "clay", "burnt"), listOf("#E6A15A", "#C97A3D", "#A95C2B", "#8B4513", "#6F3B18")),
+    CategoryColorFamilyPalette("Slate", listOf("slate", "graphite", "storm"), listOf("#94A3B8", "#64748B", "#475569", "#334155", "#1E293B")),
 )
 
-private val lightSurfaceArgb = surfaceLight.toArgb()
-private val darkSurfaceArgb = surfaceDark.toArgb()
-private val categoryPaletteSaturations = (45..90 step 5).map { it / 100f }
-private val categoryPaletteValues = (50..90 step 4).map { it / 100f }
-
-private fun relativeLuminance(argb: Int): Double {
-    fun channel(component: Int): Double {
-        val normalized = component / 255.0
-        return if (normalized <= 0.03928) {
-            normalized / 12.92
-        } else {
-            Math.pow((normalized + 0.055) / 1.055, 2.4)
-        }
-    }
-
-    val red = channel(AndroidColor.red(argb))
-    val green = channel(AndroidColor.green(argb))
-    val blue = channel(AndroidColor.blue(argb))
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
-}
-
-private fun contrastRatio(firstArgb: Int, secondArgb: Int): Double {
-    val first = relativeLuminance(firstArgb)
-    val second = relativeLuminance(secondArgb)
-    val lighter = maxOf(first, second)
-    val darker = minOf(first, second)
-    return (lighter + 0.05) / (darker + 0.05)
-}
-
-private fun isContrastSafeCategoryColor(option: CategoryColorOption): Boolean {
-    val colorArgb = runCatching { AndroidColor.parseColor(option.hex) }.getOrNull() ?: return false
-    val lightContrast = contrastRatio(colorArgb, lightSurfaceArgb)
-    val darkContrast = contrastRatio(colorArgb, darkSurfaceArgb)
-    return minOf(lightContrast, darkContrast) >= 3.0
-}
-
-private fun colorIntToHex(colorInt: Int): String =
-    String.format(Locale.US, "#%06X", 0xFFFFFF and colorInt)
-
-private fun hsvOf(hex: String): FloatArray =
-    FloatArray(3).also { hsv ->
-        AndroidColor.colorToHSV(hex.toColorInt(), hsv)
-    }
-
-private fun sampleTenColors(options: List<CategoryColorOption>): List<CategoryColorOption> {
-    require(options.size >= 10) { "Expected at least 10 options per family, got ${options.size}" }
-    return List(10) { index ->
-        val selectedIndex = ((options.lastIndex.toFloat() * index) / 9f).toInt()
-        options[selectedIndex]
-    }
-}
-
-private fun generateColorFamilyOptions(family: CategoryColorFamily): List<CategoryColorOption> {
-    val candidates = buildList {
-        if (family.monochrome) {
-            // Reserved for future neutral families if needed.
-            return@buildList
-        }
-        categoryPaletteSaturations.forEach { saturation ->
-            categoryPaletteValues.forEach { value ->
-                val colorInt = AndroidColor.HSVToColor(floatArrayOf(family.hue, saturation, value))
-                add(
-                    CategoryColorOption(
-                        hex = colorIntToHex(colorInt),
-                        label = "",
-                        family = family.name,
-                        keywords = family.keywords,
-                    )
-                )
-            }
-        }
-    }
-        .filter(::isContrastSafeCategoryColor)
-        .distinctBy { it.hex }
-        .sortedWith(
-            compareBy<CategoryColorOption>(
-                { hsvOf(it.hex)[2] },
-                { -hsvOf(it.hex)[1] },
-                { it.hex },
-            )
-        )
-
-    return sampleTenColors(candidates).mapIndexed { index, option ->
-        option.copy(
-            label = "${family.name} ${index + 1}",
-            keywords = option.keywords + listOf("palette", "shade ${index + 1}"),
+val categoryColorCatalog = List(5) { toneIndex ->
+    categoryColorFamilies.map { family ->
+        CategoryColorOption(
+            hex = family.hexes[toneIndex],
+            label = "${family.family} ${toneIndex + 1}",
+            family = family.family,
+            keywords = family.keywords + listOf("palette", "tone ${toneIndex + 1}"),
         )
     }
-}
-
-val categoryColorCatalog = categoryColorFamilies.flatMap(::generateColorFamilyOptions)
+}.flatten()
+    .distinctBy { it.hex.lowercase() }
 
 private val categoryColorOptionByNormalizedHex = categoryColorCatalog.associateBy { it.hex.lowercase() }
 private val categoryColorSearchIndexByHex = categoryColorCatalog.associate { option ->

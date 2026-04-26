@@ -16,8 +16,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,9 +70,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -928,35 +928,21 @@ private fun ColorSwatch(
     onClick: () -> Unit,
 ) {
     val fillColor = categoryAccentColor(option.hex)
+
     val strokeColor = if (selected) {
-        MaterialTheme.colorScheme.onSurface
+        Color.LightGray
     } else {
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.82f)
     }
-    val strokeWidth = if (selected) 2.5.dp else 1.25.dp
-    val inset = if (selected) 2.dp else 1.dp
 
     Box(
         modifier = Modifier
             .size(size)
+            .clip(CircleShape)
+            .background(fillColor)
+            .border(0.5.dp, strokeColor, CircleShape)
             .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(modifier = Modifier.size(size)) {
-            val strokePx = strokeWidth.toPx()
-            val insetPx = inset.toPx() + strokePx / 2f
-            val radius = this.size.minDimension / 2f - insetPx
-            drawCircle(
-                color = fillColor,
-                radius = radius,
-            )
-            drawCircle(
-                color = strokeColor,
-                radius = radius,
-                style = Stroke(width = strokePx),
-            )
-        }
-    }
+    )
 }
 
 @Composable
