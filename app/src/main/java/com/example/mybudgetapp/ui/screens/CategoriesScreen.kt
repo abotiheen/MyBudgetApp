@@ -44,6 +44,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -75,7 +79,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.database.BudgetCategory
@@ -124,6 +127,7 @@ fun CategoriesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
+    var categoryToEdit by remember { mutableStateOf<BudgetCategory?>(null) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -167,22 +171,58 @@ fun CategoriesScreen(
                         }
                     }
                 },
-            )
-        }
-
-        if (showAddSheet) {
-            AddCategoryBottomSheet(
-                onDismissRequest = { showAddSheet = false },
-                onSaveCategory = { draft ->
-                    viewModel.addCategory(draft) { result ->
+                onRestoreCategory = { category ->
+                    viewModel.restoreCategory(category) { result ->
                         when (result) {
-                            is CategorySaveResult.Invalid -> {
+                            is CategoryActionResult.Invalid -> {
                                 Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
                             }
 
-                            CategorySaveResult.Saved -> {
-                                Toast.makeText(context, "Category added", Toast.LENGTH_SHORT).show()
-                                showAddSheet = false
+                            is CategoryActionResult.Success -> {
+                                Toast.makeText(context, "Category restored", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                },
+                onEditCategory = { category ->
+                    categoryToEdit = category
+                }
+            )
+        }
+
+        if (showAddSheet || categoryToEdit != null) {
+            AddOrEditCategoryBottomSheet(
+                initialCategory = categoryToEdit,
+                onDismissRequest = { 
+                    showAddSheet = false
+                    categoryToEdit = null
+                },
+                onSaveCategory = { draft ->
+                    val editTarget = categoryToEdit
+                    if (editTarget != null) {
+                        viewModel.editCategory(editTarget, draft) { result ->
+                            when (result) {
+                                is CategorySaveResult.Invalid -> {
+                                    Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                                }
+
+                                CategorySaveResult.Saved -> {
+                                    Toast.makeText(context, "Category updated", Toast.LENGTH_SHORT).show()
+                                    categoryToEdit = null
+                                }
+                            }
+                        }
+                    } else {
+                        viewModel.addCategory(draft) { result ->
+                            when (result) {
+                                is CategorySaveResult.Invalid -> {
+                                    Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                                }
+
+                                CategorySaveResult.Saved -> {
+                                    Toast.makeText(context, "Category added", Toast.LENGTH_SHORT).show()
+                                    showAddSheet = false
+                                }
                             }
                         }
                     }
@@ -196,6 +236,8 @@ fun CategoriesScreen(
 private fun CategoriesBody(
     uiState: CategoriesUiState,
     onArchiveCategory: (BudgetCategory) -> Unit,
+    onRestoreCategory: (BudgetCategory) -> Unit,
+    onEditCategory: (BudgetCategory) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(
@@ -233,10 +275,8 @@ private fun CategoriesBody(
             items(uiState.expenseCategories, key = { it.categoryKey }) { category ->
                 CategoryRow(
                     category = category,
-                    onArchive = if (category.isDefault) {
-                        null
-                    } else {
-                        { onArchiveCategory(category) }
+                    trailingContent = if (category.isDefault) null else {
+                        { ActiveCategoryMenu(category, onEditCategory, onArchiveCategory) }
                     },
                 )
             }
@@ -261,10 +301,8 @@ private fun CategoriesBody(
             items(uiState.incomeCategories, key = { it.categoryKey }) { category ->
                 CategoryRow(
                     category = category,
-                    onArchive = if (category.isDefault) {
-                        null
-                    } else {
-                        { onArchiveCategory(category) }
+                    trailingContent = if (category.isDefault) null else {
+                        { ActiveCategoryMenu(category, onEditCategory, onArchiveCategory) }
                     },
                 )
             }
@@ -277,7 +315,18 @@ private fun CategoriesBody(
                 )
             }
             items(uiState.archivedCategories, key = { it.categoryKey }) { category ->
-                CategoryRow(category = category)
+                CategoryRow(
+                    category = category,
+                    trailingContent = {
+                        IconButton(onClick = { onRestoreCategory(category) }) {
+                            Icon(
+                                imageVector = Icons.Default.Restore,
+                                contentDescription = "Restore",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                )
             }
         }
     }
@@ -360,7 +409,7 @@ private fun CategoryStatChip(
 @Composable
 private fun CategoryRow(
     category: BudgetCategory,
-    onArchive: (() -> Unit)? = null,
+    trailingContent: @Composable (() -> Unit)? = null,
 ) {
     val accent = categoryAccentColor(category.colorHex, category.categoryKey)
     Surface(
@@ -417,24 +466,47 @@ private fun CategoryRow(
                     color = accent,
                 )
             }
-            if (onArchive != null) {
-                Surface(
-                    onClick = onArchive,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.84f),
-                    shape = CircleShape,
-                ) {
-                    Box(
-                        modifier = Modifier.size(36.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = com.example.mybudgetapp.R.drawable.baseline_settings_24),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+            if (trailingContent != null) {
+                trailingContent()
             }
+        }
+    }
+}
+
+@Composable
+private fun ActiveCategoryMenu(
+    category: BudgetCategory,
+    onEditCategory: (BudgetCategory) -> Unit,
+    onArchiveCategory: (BudgetCategory) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More options",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Edit") },
+                onClick = {
+                    expanded = false
+                    onEditCategory(category)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Archive") },
+                onClick = {
+                    expanded = false
+                    onArchiveCategory(category)
+                },
+            )
         }
     }
 }
@@ -447,7 +519,8 @@ private enum class AddCategoryPickerNav {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddCategoryBottomSheet(
+private fun AddOrEditCategoryBottomSheet(
+    initialCategory: BudgetCategory? = null,
     onDismissRequest: () -> Unit,
     onSaveCategory: (CategoryDraft) -> Unit,
 ) {
@@ -456,7 +529,14 @@ private fun AddCategoryBottomSheet(
     var sheetContentVisible by remember { mutableStateOf(false) }
     var draft by remember {
         mutableStateOf(
-            CategoryDraft(
+            initialCategory?.let {
+                CategoryDraft(
+                    name = it.name,
+                    type = it.type,
+                    iconKey = it.iconKey,
+                    colorHex = it.colorHex,
+                )
+            } ?: CategoryDraft(
                 type = TRANSACTION_TYPE_EXPENSE,
                 iconKey = defaultCategoryIconKey,
                 colorHex = defaultCategoryColorHex,
@@ -572,6 +652,7 @@ private fun AddCategoryBottomSheet(
                                 onQueryChange = { colorQuery = it },
                                 onColorSelected = {
                                     draft = draft.copy(colorHex = it)
+                                    nav = AddCategoryPickerNav.Main
                                 },
                             )
                         }
@@ -589,7 +670,7 @@ private fun AddCategoryBottomSheet(
                             .height(52.dp),
                         shape = RoundedCornerShape(BudgetTheme.radii.lg),
                     ) {
-                        Text("Save category")
+                        Text(if (initialCategory == null) "Save category" else "Update category")
                     }
                 }
             }
@@ -940,7 +1021,7 @@ private fun ColorSwatch(
             .size(size)
             .clip(CircleShape)
             .background(fillColor)
-            .border(0.5.dp, strokeColor, CircleShape)
+            .border(1.dp, strokeColor, CircleShape)
             .clickable(onClick = onClick),
     )
 }

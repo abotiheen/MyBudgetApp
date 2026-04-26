@@ -27,6 +27,7 @@ interface ItemRepository {
     suspend fun insertCategories(categories: List<BudgetCategory>)
     suspend fun updateCategory(category: BudgetCategory)
     suspend fun archiveCategory(categoryKey: String)
+    suspend fun unarchiveCategory(categoryKey: String)
 
     fun getTransaction(id: Long): Flow<BudgetTransaction>
     fun getAllCategories(includeArchived: Boolean = true): Flow<List<BudgetCategory>>

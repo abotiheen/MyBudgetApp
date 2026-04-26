@@ -64,6 +64,9 @@ class OfflineRepository(
     override suspend fun archiveCategory(categoryKey: String) =
         categoryDao.archiveCategory(categoryKey)
 
+    override suspend fun unarchiveCategory(categoryKey: String) =
+        categoryDao.unarchiveCategory(categoryKey)
+
     override fun getTransaction(id: Long): Flow<BudgetTransaction> =
         transactionDao.getTransaction(id)
 

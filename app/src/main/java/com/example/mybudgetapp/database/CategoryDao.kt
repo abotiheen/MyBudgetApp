@@ -109,6 +109,15 @@ interface CategoryDao {
 
     @Query(
         """
+        update categories
+        set isArchived = 0
+        where categoryKey = :categoryKey
+        """
+    )
+    suspend fun unarchiveCategory(categoryKey: String)
+
+    @Query(
+        """
         select * from categories
         order by isArchived asc, sortOrder asc, name asc
         """
