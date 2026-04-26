@@ -66,7 +66,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -89,8 +88,8 @@ import com.example.mybudgetapp.ui.viewmodels.SaveEntryResult
 import com.example.mybudgetapp.ui.viewmodels.SpendingItemDetailsUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -565,7 +564,8 @@ private fun EntryUtilityTray(
                 categories.forEach { category ->
                     CompactCategoryChip(
                         label = category.label,
-                        iconPainter = categoryIconPainter(category.iconKey, category.value),
+                        iconKey = category.iconKey,
+                        fallbackCategoryKey = category.value,
                         selected = selectedCategory == category.value,
                         accentColor = if (selectedCategory == category.value) {
                             accentColor
@@ -627,7 +627,8 @@ private fun EntryUtilityTray(
 @Composable
 private fun CompactCategoryChip(
     label: String,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String,
     selected: Boolean,
     accentColor: Color,
     onClick: () -> Unit,
@@ -670,11 +671,12 @@ private fun CompactCategoryChip(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = iconPainter,
-                contentDescription = null,
+            CategoryIcon(
+                iconKey = iconKey,
+                fallbackCategoryKey = fallbackCategoryKey,
                 modifier = Modifier.size(16.dp),
                 tint = contentColor.value,
+                size = 16.dp,
             )
             Text(
                 text = label,

@@ -60,6 +60,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2023.06.01"))
     implementation(libs.androidx.activity.compose)
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation(libs.androidx.ktx)

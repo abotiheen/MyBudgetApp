@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -49,10 +48,10 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object SpendingOnCategoryForYearDestination : NavigationDestination {
     override val route = "SpendingOnCategory"
@@ -129,7 +128,6 @@ private fun SpendingOnCategoryYearBody(
     val spacing = BudgetTheme.spacing
     val categoryLabel = uiState.category
     val accent = categoryAccentColor(uiState.categoryColorHex, uiState.sentCategory)
-    val iconPainter = categoryIconPainter(uiState.categoryIconKey, uiState.sentCategory)
 
     LazyColumn(
         modifier = modifier,
@@ -148,7 +146,8 @@ private fun SpendingOnCategoryYearBody(
                 totalCategory = uiState.totalCategory,
                 totalSpending = uiState.totalSpending,
                 spendingRatio = uiState.spendingRatio,
-                iconPainter = iconPainter,
+                iconKey = uiState.categoryIconKey,
+                fallbackCategoryKey = uiState.sentCategory,
                 accent = accent,
             )
         }
@@ -209,7 +208,8 @@ private fun SpendingOnCategoryYearBody(
                             item.month,
                         )
                     },
-                    iconPainter = iconPainter,
+                    iconKey = uiState.categoryIconKey,
+                    fallbackCategoryKey = uiState.sentCategory,
                 )
             }
         }
@@ -223,7 +223,8 @@ private fun YearCategorySnapshotCard(
     totalCategory: String,
     totalSpending: String,
     spendingRatio: Float,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String,
     accent: Color,
 ) {
     Card(
@@ -265,10 +266,11 @@ private fun YearCategorySnapshotCard(
                                 modifier = Modifier.size(52.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(
-                                    painter = iconPainter,
-                                    contentDescription = null,
+                                CategoryIcon(
+                                    iconKey = iconKey,
+                                    fallbackCategoryKey = fallbackCategoryKey,
                                     tint = accent,
+                                    size = 28.dp,
                                 )
                             }
                         }

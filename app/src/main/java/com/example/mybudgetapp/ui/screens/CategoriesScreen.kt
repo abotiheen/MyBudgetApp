@@ -12,12 +12,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +32,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,11 +76,17 @@ import com.example.mybudgetapp.ui.viewmodels.CategorySaveResult
 import com.example.mybudgetapp.ui.widgets.AnimatedSegmentedControl
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryColorChoices
+import com.example.mybudgetapp.ui.widgets.categoryColorCatalog
 import com.example.mybudgetapp.ui.widgets.categoryIconChoices
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
+import com.example.mybudgetapp.ui.widgets.defaultCategoryColorHex
+import com.example.mybudgetapp.ui.widgets.defaultCategoryIconKey
+import com.example.mybudgetapp.ui.widgets.matchesCategoryColorOption
+import com.example.mybudgetapp.ui.widgets.matchesCategoryIconChoice
+import com.example.mybudgetapp.ui.widgets.resolveCategoryColorOption
+import com.example.mybudgetapp.ui.widgets.resolveCategoryIconChoice
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -199,7 +207,8 @@ private fun CategoriesBody(
                     title = "No expense categories yet",
                     message = "Add one to start organizing spending with your own structure.",
                     accent = MaterialTheme.colorScheme.primary,
-                    iconPainter = categoryIconPainter("cookie", "others"),
+                    iconKey = "misc",
+                    fallbackCategoryKey = "others",
                 )
             }
         } else {
@@ -226,7 +235,8 @@ private fun CategoriesBody(
                     title = "No income categories yet",
                     message = "Add one when you want more than a single income bucket.",
                     accent = MaterialTheme.colorScheme.primary,
-                    iconPainter = categoryIconPainter("attach_money", "income"),
+                    iconKey = "income",
+                    fallbackCategoryKey = "income",
                 )
             }
         } else {
@@ -335,7 +345,6 @@ private fun CategoryRow(
     onArchive: (() -> Unit)? = null,
 ) {
     val accent = categoryAccentColor(category.colorHex, category.categoryKey)
-    val iconPainter = categoryIconPainter(category.iconKey, category.categoryKey)
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
@@ -356,10 +365,11 @@ private fun CategoryRow(
                     modifier = Modifier.size(48.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painter = iconPainter,
-                        contentDescription = null,
+                    CategoryIcon(
+                        iconKey = category.iconKey,
+                        fallbackCategoryKey = category.categoryKey,
                         tint = accent,
+                        size = 24.dp,
                     )
                 }
             }
@@ -411,7 +421,7 @@ private fun CategoryRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddCategoryBottomSheet(
     onDismissRequest: () -> Unit,
@@ -424,8 +434,8 @@ private fun AddCategoryBottomSheet(
         mutableStateOf(
             CategoryDraft(
                 type = TRANSACTION_TYPE_EXPENSE,
-                iconKey = categoryIconChoices.first().key,
-                colorHex = categoryColorChoices.first(),
+                iconKey = defaultCategoryIconKey,
+                colorHex = defaultCategoryColorHex,
             )
         )
     }
@@ -512,59 +522,20 @@ private fun AddCategoryBottomSheet(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-                ) {
-                    categoryIconChoices.forEach { iconChoice ->
-                        val selected = draft.iconKey == iconChoice.key
-                        val accent = categoryAccentColor(draft.colorHex)
-                        val iconPainter = categoryIconPainter(iconChoice.key)
-                        Surface(
-                            onClick = { draft = draft.copy(iconKey = iconChoice.key) },
-                            color = if (selected) accent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(BudgetTheme.radii.lg),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .background(
-                                        if (selected) accent.copy(alpha = 0.08f) else Color.Transparent,
-                                        RoundedCornerShape(BudgetTheme.radii.lg),
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    painter = iconPainter,
-                                    contentDescription = null,
-                                    tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
+                IconDropdownField(
+                    selectedIconKey = draft.iconKey,
+                    accent = categoryAccentColor(draft.colorHex),
+                    onIconSelected = { draft = draft.copy(iconKey = it) },
+                )
                 Text(
                     text = "Color",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-                ) {
-                    categoryColorChoices.forEach { colorHex ->
-                        val color = categoryAccentColor(colorHex)
-                        val selected = draft.colorHex == colorHex
-                        Surface(
-                            onClick = { draft = draft.copy(colorHex = colorHex) },
-                            color = color,
-                            shape = CircleShape,
-                            border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null,
-                        ) {
-                            Box(modifier = Modifier.size(32.dp))
-                        }
-                    }
-                }
+                ColorDropdownField(
+                    selectedColorHex = draft.colorHex,
+                    onColorSelected = { draft = draft.copy(colorHex = it) },
+                )
                 Card(
                     shape = RoundedCornerShape(BudgetTheme.radii.lg),
                     colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
@@ -581,15 +552,14 @@ private fun AddCategoryBottomSheet(
                             color = accent.copy(alpha = 0.12f),
                             shape = RoundedCornerShape(BudgetTheme.radii.md),
                         ) {
-                            val previewIconPainter = categoryIconPainter(draft.iconKey)
                             Box(
                                 modifier = Modifier.size(48.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(
-                                    painter = previewIconPainter,
-                                    contentDescription = null,
+                                CategoryIcon(
+                                    iconKey = draft.iconKey,
                                     tint = accent,
+                                    size = 24.dp,
                                 )
                             }
                         }
@@ -615,6 +585,232 @@ private fun AddCategoryBottomSheet(
                     shape = RoundedCornerShape(BudgetTheme.radii.lg),
                 ) {
                     Text("Save category")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IconDropdownField(
+    selectedIconKey: String,
+    accent: Color,
+    onIconSelected: (String) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val selectedChoice = resolveCategoryIconChoice(selectedIconKey)
+    val filteredChoices = remember(query) {
+        categoryIconChoices.filter { matchesCategoryIconChoice(it, query) }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+    ) {
+        OutlinedTextField(
+            value = selectedChoice.label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Icon") },
+            leadingIcon = {
+                CategoryIcon(
+                    iconKey = selectedChoice.key,
+                    tint = accent,
+                    size = 20.dp,
+                )
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 420.dp),
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Search icons") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(BudgetTheme.radii.md),
+            )
+            if (filteredChoices.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("No icons found") },
+                    onClick = {},
+                    enabled = false,
+                )
+            } else {
+                var previousGroup = ""
+                filteredChoices.forEach { choice ->
+                    if (choice.group != previousGroup) {
+                        previousGroup = choice.group
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = choice.group,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            onClick = {},
+                            enabled = false,
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Surface(
+                                    color = accent.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(BudgetTheme.radii.sm),
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(32.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        CategoryIcon(
+                                            iconKey = choice.key,
+                                            tint = accent,
+                                            size = 18.dp,
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(choice.label, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = choice.group,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                        onClick = {
+                            onIconSelected(choice.key)
+                            expanded = false
+                            query = ""
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ColorDropdownField(
+    selectedColorHex: String,
+    onColorSelected: (String) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val selectedOption = resolveCategoryColorOption(selectedColorHex)
+    val selectedColor = categoryAccentColor(selectedColorHex)
+    val filteredOptions = remember(query) {
+        categoryColorCatalog.filter { matchesCategoryColorOption(it, query) }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+    ) {
+        OutlinedTextField(
+            value = selectedOption?.label ?: selectedColorHex,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Color") },
+            leadingIcon = {
+                Surface(
+                    color = selectedColor,
+                    shape = CircleShape,
+                ) {
+                    Box(modifier = Modifier.size(18.dp))
+                }
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 360.dp),
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Search colors") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(BudgetTheme.radii.md),
+            )
+            if (filteredOptions.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("No colors found") },
+                    onClick = {},
+                    enabled = false,
+                )
+            } else {
+                var previousFamily = ""
+                filteredOptions.forEach { option ->
+                    if (option.family != previousFamily) {
+                        previousFamily = option.family
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = option.family,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            onClick = {},
+                            enabled = false,
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Surface(
+                                    color = categoryAccentColor(option.hex),
+                                    shape = CircleShape,
+                                ) {
+                                    Box(modifier = Modifier.size(20.dp))
+                                }
+                                Column {
+                                    Text(option.label, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = option.hex,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                        onClick = {
+                            onColorSelected(option.hex)
+                            expanded = false
+                            query = ""
+                        },
+                    )
                 }
             }
         }

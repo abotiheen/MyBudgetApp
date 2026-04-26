@@ -37,9 +37,9 @@ import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.HomeTransactionPreview
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 data class DashboardQuickStat(
     val label: String,
@@ -434,8 +434,6 @@ private fun DashboardLaneRow(
         animationSpec = tween(durationMillis = 500),
         label = "dashboardLaneProgress",
     )
-    val iconPainter = categoryIconPainter(lane.iconKey, lane.categoryKey)
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -461,10 +459,11 @@ private fun DashboardLaneRow(
                         modifier = Modifier.size(46.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = null,
+                        CategoryIcon(
+                            iconKey = lane.iconKey,
+                            fallbackCategoryKey = lane.categoryKey,
                             tint = lane.accent,
+                            size = 24.dp,
                         )
                     }
                 }

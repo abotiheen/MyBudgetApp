@@ -48,9 +48,9 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object CategoryBreakdownDestination : NavigationDestination {
     override val route = "CategoryBreakdown"
@@ -110,10 +110,6 @@ private fun CategoryBreakdownBody(
     } else {
         BudgetTheme.extendedColors.danger
     }
-    val heroIconPainter = categoryIconPainter(
-        iconKey = if (uiState.isIncome) "attach_money" else "money_off",
-        fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
-    )
 
     LazyColumn(
         modifier = modifier,
@@ -151,7 +147,8 @@ private fun CategoryBreakdownBody(
                 totalLabel = uiState.totalLabel,
                 categoryCount = uiState.categories.size,
                 accent = heroAccent,
-                iconPainter = heroIconPainter,
+                iconKey = if (uiState.isIncome) "income" else "bills",
+                fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
             )
         }
         item {
@@ -192,7 +189,8 @@ private fun CategoryBreakdownBody(
                 EmptyBreakdownCard(
                     isIncome = uiState.isIncome,
                     accent = heroAccent,
-                    iconPainter = heroIconPainter,
+                    iconKey = if (uiState.isIncome) "income" else "bills",
+                    fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
                 )
             }
         } else {
@@ -218,7 +216,8 @@ private fun CategoryBreakdownHero(
     totalLabel: String,
     categoryCount: Int,
     accent: Color,
-    iconPainter: androidx.compose.ui.graphics.painter.Painter,
+    iconKey: String,
+    fallbackCategoryKey: String,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -252,10 +251,11 @@ private fun CategoryBreakdownHero(
                         modifier = Modifier.size(48.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = null,
+                        CategoryIcon(
+                            iconKey = iconKey,
+                            fallbackCategoryKey = fallbackCategoryKey,
                             tint = accent,
+                            size = 24.dp,
                         )
                     }
                 }
@@ -308,7 +308,6 @@ private fun CategoryBreakdownRow(
         animationSpec = tween(durationMillis = 420),
         label = "categoryBreakdownProgress",
     )
-    val iconPainter = categoryIconPainter(category.iconKey, category.categoryKey)
 
     Surface(
         onClick = onClick,
@@ -341,10 +340,11 @@ private fun CategoryBreakdownRow(
                             modifier = Modifier.size(46.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                painter = iconPainter,
-                                contentDescription = null,
+                            CategoryIcon(
+                                iconKey = category.iconKey,
+                                fallbackCategoryKey = category.categoryKey,
                                 tint = accent,
+                                size = 24.dp,
                             )
                         }
                     }
@@ -434,7 +434,8 @@ private fun CategoryBreakdownRow(
 private fun EmptyBreakdownCard(
     isIncome: Boolean,
     accent: Color,
-    iconPainter: androidx.compose.ui.graphics.painter.Painter,
+    iconKey: String,
+    fallbackCategoryKey: String,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -455,10 +456,11 @@ private fun EmptyBreakdownCard(
                     modifier = Modifier.size(44.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painter = iconPainter,
-                        contentDescription = null,
+                    CategoryIcon(
+                        iconKey = iconKey,
+                        fallbackCategoryKey = fallbackCategoryKey,
                         tint = accent,
+                        size = 22.dp,
                     )
                 }
             }

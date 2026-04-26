@@ -33,7 +33,6 @@ import com.example.mybudgetapp.ui.viewmodels.SpendingOnCategoryUiState
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object SpendingOnCategoryDestination : NavigationDestination {
     override val route = "SpendingOnCategory"
@@ -110,7 +109,6 @@ fun SpendingOnCategoryBody(
     val spacing = BudgetTheme.spacing
     val categoryLabel = uiState.category
     val accent = categoryAccentColor(uiState.categoryColorHex, uiState.sentCategory)
-    val iconPainter = categoryIconPainter(uiState.categoryIconKey, uiState.sentCategory)
 
     LazyColumn(
         modifier = modifier,
@@ -130,7 +128,8 @@ fun SpendingOnCategoryBody(
                 subtitle = "Spending concentrated in ${categoryLabel.lowercase()} for this month.",
                 badgeLabel = "${(uiState.spendingRatio * 100).toInt()}% share",
                 accent = accent,
-                iconPainter = iconPainter,
+                iconKey = uiState.categoryIconKey,
+                fallbackCategoryKey = uiState.sentCategory,
                 chips = listOf(
                     DetailHeroChipUi("Entries", uiState.transactionCount.toString()),
                     DetailHeroChipUi("Average", uiState.averageTransaction, isMonetary = true),
@@ -154,7 +153,8 @@ fun SpendingOnCategoryBody(
                     title = "No ${categoryLabel.lowercase()} entries yet",
                     message = "When entries land here, this view becomes much easier to review.",
                     accent = accent,
-                    iconPainter = iconPainter,
+                    iconKey = uiState.categoryIconKey,
+                    fallbackCategoryKey = uiState.sentCategory,
                 )
             }
         } else {
@@ -164,7 +164,8 @@ fun SpendingOnCategoryBody(
                     amount = item.totalCost,
                     meta = "$categoryLabel • ${item.date}",
                     imagePath = item.imagePath,
-                    iconPainter = iconPainter,
+                    iconKey = uiState.categoryIconKey,
+                    fallbackCategoryKey = uiState.sentCategory,
                     accent = accent,
                     onOpen = {
                         navigateToItemDates(

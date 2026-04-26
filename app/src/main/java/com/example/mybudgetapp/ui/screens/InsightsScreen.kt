@@ -56,10 +56,10 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object InsightsDestination : NavigationDestination {
     override val route = "Insights"
@@ -528,7 +528,6 @@ private fun CategoryBreakdownRow(
     onClick: () -> Unit,
 ) {
     val accent = categoryAccentColor(category.colorHex, category.category)
-    val iconPainter = categoryIconPainter(category.iconKey, category.category)
     val progress = if (totalSpendingAmount > 0) {
         (category.total / totalSpendingAmount).toFloat().coerceIn(0f, 1f)
     } else {
@@ -563,10 +562,11 @@ private fun CategoryBreakdownRow(
                             modifier = Modifier.size(44.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                painter = iconPainter,
-                                contentDescription = null,
+                            CategoryIcon(
+                                iconKey = category.iconKey,
+                                fallbackCategoryKey = category.category,
                                 tint = accent,
+                                size = 24.dp,
                             )
                         }
                     }

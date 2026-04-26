@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -146,7 +145,8 @@ fun ItemCard(
     modifier: Modifier = Modifier,
     title: String,
     totalSpending: String,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String = "",
     accentColor: Color,
     date: String,
     imagePath: String?,
@@ -214,16 +214,17 @@ fun ItemCard(
                         AsyncImage(
                             model = imagePath,
                             contentDescription = null,
-                            placeholder = iconPainter,
-                            error = iconPainter,
+                            placeholder = categoryPlaceholderPainter(iconKey, fallbackCategoryKey),
+                            error = categoryPlaceholderPainter(iconKey, fallbackCategoryKey),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = null,
+                        CategoryIcon(
+                            iconKey = iconKey,
+                            fallbackCategoryKey = fallbackCategoryKey,
                             tint = accentColor,
+                            size = 28.dp,
                         )
                     }
                 }
@@ -358,7 +359,8 @@ fun DateCard(
 fun ItemCardForDates(
     modifier: Modifier = Modifier,
     title: String,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String = "",
     accentColor: Color,
     imagePath: String?,
 ) {
@@ -393,16 +395,17 @@ fun ItemCardForDates(
                     AsyncImage(
                         model = imagePath,
                         contentDescription = null,
-                        placeholder = iconPainter,
-                        error = iconPainter,
+                        placeholder = categoryPlaceholderPainter(iconKey, fallbackCategoryKey),
+                        error = categoryPlaceholderPainter(iconKey, fallbackCategoryKey),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    Icon(
-                        painter = iconPainter,
-                        contentDescription = null,
+                    CategoryIcon(
+                        iconKey = iconKey,
+                        fallbackCategoryKey = fallbackCategoryKey,
                         tint = accentColor,
+                        size = 28.dp,
                     )
                 }
             }

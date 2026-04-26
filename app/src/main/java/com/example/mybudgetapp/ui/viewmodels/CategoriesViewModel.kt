@@ -6,8 +6,8 @@ import com.example.mybudgetapp.database.BudgetCategory
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.TRANSACTION_TYPE_EXPENSE
 import com.example.mybudgetapp.database.TRANSACTION_TYPE_INCOME
-import com.example.mybudgetapp.ui.widgets.categoryColorChoices
-import com.example.mybudgetapp.ui.widgets.categoryIconChoices
+import com.example.mybudgetapp.ui.widgets.defaultCategoryColorHex
+import com.example.mybudgetapp.ui.widgets.defaultCategoryIconKey
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -67,8 +67,8 @@ class CategoriesViewModel(
                     categoryKey = categoryKey,
                     name = normalizedName,
                     type = draft.type,
-                    iconKey = draft.iconKey.ifBlank { categoryIconChoices.first().key },
-                    colorHex = draft.colorHex.ifBlank { categoryColorChoices.first() },
+                    iconKey = draft.iconKey.ifBlank { defaultCategoryIconKey },
+                    colorHex = draft.colorHex.ifBlank { defaultCategoryColorHex },
                     isDefault = false,
                     sortOrder = existingCategories.count { it.type == draft.type },
                 )
@@ -118,8 +118,8 @@ data class CategoriesUiState(
 data class CategoryDraft(
     val name: String = "",
     val type: String = TRANSACTION_TYPE_EXPENSE,
-    val iconKey: String = "cookie",
-    val colorHex: String = "#5EBB4A",
+    val iconKey: String = defaultCategoryIconKey,
+    val colorHex: String = defaultCategoryColorHex,
 )
 
 sealed interface CategorySaveResult {

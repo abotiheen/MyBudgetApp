@@ -1,34 +1,21 @@
 package com.example.mybudgetapp.ui.widgets
 
 import android.graphics.Color as AndroidColor
-import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.res.painterResource
-import com.example.mybudgetapp.R
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.example.mybudgetapp.database.CATEGORY_KEY_FOOD
 import com.example.mybudgetapp.database.CATEGORY_KEY_INCOME
 import com.example.mybudgetapp.database.CATEGORY_KEY_OTHERS
@@ -38,119 +25,527 @@ import com.example.mybudgetapp.ui.theme.BudgetTheme
 data class CategoryIconChoice(
     val key: String,
     val label: String,
-    @DrawableRes val iconRes: Int? = null,
-    val iconVector: ImageVector? = null,
+    val ligature: String,
+    val group: String,
+    val keywords: List<String> = emptyList(),
 )
+
+data class CategoryColorOption(
+    val hex: String,
+    val label: String,
+    val family: String,
+    val keywords: List<String> = emptyList(),
+)
+
+const val defaultCategoryIconKey = "misc"
+const val defaultCategoryColorHex = "#5EBB4A"
 
 val categoryIconChoices = listOf(
-    CategoryIconChoice("fastfood", "Food", iconRes = R.drawable.baseline_fastfood_24),
-    CategoryIconChoice("directions_transit", "Transit", iconRes = R.drawable.baseline_directions_transit_24),
-    CategoryIconChoice("cookie", "General", iconRes = R.drawable.baseline_cookie_24),
-    CategoryIconChoice("attach_money", "Money", iconRes = R.drawable.baseline_attach_money_24),
-    CategoryIconChoice("calendar", "Schedule", iconRes = R.drawable.baseline_calendar_month_24),
-    CategoryIconChoice("timeline", "Trend", iconRes = R.drawable.baseline_view_timeline_24),
-    CategoryIconChoice("settings_drawable", "Utility", iconRes = R.drawable.baseline_settings_24),
-    CategoryIconChoice("money_off", "Bills", iconRes = R.drawable.baseline_money_off_24),
-    CategoryIconChoice("add", "Misc", iconVector = Icons.Filled.Add),
-    CategoryIconChoice("home", "Home", iconVector = Icons.Filled.Home),
-    CategoryIconChoice("shopping_cart", "Shopping", iconVector = Icons.Filled.ShoppingCart),
-    CategoryIconChoice("favorite", "Health", iconVector = Icons.Filled.Favorite),
-    CategoryIconChoice("star", "Goals", iconVector = Icons.Filled.Star),
-    CategoryIconChoice("settings", "Tools", iconVector = Icons.Filled.Settings),
-    CategoryIconChoice("search", "Discovery", iconVector = Icons.Filled.Search),
-    CategoryIconChoice("edit", "Work", iconVector = Icons.Filled.Edit),
-    CategoryIconChoice("delete", "Cleanup", iconVector = Icons.Filled.Delete),
-    CategoryIconChoice("info", "Info", iconVector = Icons.Filled.Info),
-    CategoryIconChoice("help", "Support", iconVector = Icons.Filled.Info),
-    CategoryIconChoice("call", "Phone", iconVector = Icons.Filled.Call),
-    CategoryIconChoice("email", "Mail", iconVector = Icons.Filled.Email),
-    CategoryIconChoice("send", "Transfer", iconVector = Icons.AutoMirrored.Filled.Send),
-    CategoryIconChoice("place", "Travel", iconVector = Icons.Filled.Place),
-    CategoryIconChoice("check_circle", "Completed", iconVector = Icons.Filled.CheckCircle),
-    CategoryIconChoice("lock", "Security", iconVector = Icons.Filled.Lock),
-    CategoryIconChoice("more_vert", "More", iconVector = Icons.Filled.MoreVert),
+    CategoryIconChoice("misc", "General", "category", "Essentials", listOf("misc", "other", "others", "general", "default")),
+    CategoryIconChoice("food", "Food", "fastfood", "Essentials", listOf("meal", "restaurant", "eating")),
+    CategoryIconChoice("transportation", "Transportation", "directions_transit", "Essentials", listOf("transit", "travel", "commute")),
+    CategoryIconChoice("income", "Income", "attach_money", "Essentials", listOf("salary", "earnings", "money")),
+    CategoryIconChoice("bills", "Bills", "money_off", "Essentials", listOf("utilities", "payment")),
+    CategoryIconChoice("calendar", "Calendar", "calendar_month", "Essentials", listOf("date", "schedule")),
+    CategoryIconChoice("trends", "Trends", "timeline", "Essentials", listOf("analytics", "progress")),
+    CategoryIconChoice("settings", "Settings", "settings", "Essentials", listOf("tools", "utility")),
+    CategoryIconChoice("information", "Information", "info", "Essentials", listOf("details", "about")),
+    CategoryIconChoice("support", "Support", "help", "Essentials", listOf("help", "question")),
+    CategoryIconChoice("phone", "Phone", "call", "Essentials", listOf("mobile", "contact")),
+    CategoryIconChoice("email", "Email", "email", "Essentials", listOf("mail", "message")),
+    CategoryIconChoice("transfer", "Transfer", "send", "Essentials", listOf("move", "wire", "send")),
+    CategoryIconChoice("location", "Location", "place", "Essentials", listOf("address", "pin")),
+    CategoryIconChoice("done", "Done", "check_circle", "Essentials", listOf("complete", "finished")),
+    CategoryIconChoice("security", "Security", "lock", "Essentials", listOf("secure", "private")),
+    CategoryIconChoice("more", "More", "more_vert", "Essentials", listOf("menu", "other")),
+    CategoryIconChoice("camera", "Camera", "camera_alt", "Essentials", listOf("photo", "image")),
+    CategoryIconChoice("photos", "Photos", "photo_library", "Essentials", listOf("gallery", "pictures")),
+    CategoryIconChoice("planner", "Planner", "event_note", "Essentials", listOf("agenda", "notes")),
+    CategoryIconChoice("services", "Services", "build", "Essentials", listOf("manage", "tools")),
+    CategoryIconChoice("map", "Map", "map", "Essentials", listOf("travel", "navigation")),
+    CategoryIconChoice("history", "History", "history", "Essentials", listOf("past", "records")),
+    CategoryIconChoice("savings", "Savings", "savings", "Essentials", listOf("save", "money")),
+    CategoryIconChoice("share", "Share", "share", "Essentials", listOf("shared", "send")),
+    CategoryIconChoice("compass", "Compass", "explore", "Essentials", listOf("direction", "navigation")),
+    CategoryIconChoice("day", "Day", "calendar_today", "Essentials", listOf("today", "daily")),
+    CategoryIconChoice("storage", "Storage", "inventory_2", "Essentials", listOf("sort", "box")),
+    CategoryIconChoice("view", "View", "visibility", "Essentials", listOf("show", "see")),
+
+    CategoryIconChoice("groceries", "Groceries", "local_grocery_store", "Food & Drink", listOf("market", "supermarket")),
+    CategoryIconChoice("eating_out", "Eating Out", "restaurant", "Food & Drink", listOf("dining", "restaurant")),
+    CategoryIconChoice("coffee", "Coffee", "local_cafe", "Food & Drink", listOf("cafe", "espresso")),
+    CategoryIconChoice("drinks", "Drinks", "local_bar", "Food & Drink", listOf("bar", "beverages")),
+    CategoryIconChoice("pizza", "Pizza", "local_pizza", "Food & Drink", listOf("slice")),
+    CategoryIconChoice("bakery", "Bakery", "bakery_dining", "Food & Drink", listOf("bread", "pastry")),
+    CategoryIconChoice("dessert", "Dessert", "icecream", "Food & Drink", listOf("sweet", "ice cream")),
+    CategoryIconChoice("noodles", "Noodles", "ramen_dining", "Food & Drink", listOf("ramen", "soup")),
+    CategoryIconChoice("breakfast", "Breakfast", "breakfast_dining", "Food & Drink", listOf("morning")),
+    CategoryIconChoice("lunch", "Lunch", "lunch_dining", "Food & Drink", listOf("midday")),
+    CategoryIconChoice("dinner", "Dinner", "dinner_dining", "Food & Drink", listOf("evening")),
+    CategoryIconChoice("snacks", "Snacks", "cookie", "Food & Drink", listOf("treat", "cookie")),
+    CategoryIconChoice("takeout", "Takeout", "takeout_dining", "Food & Drink", listOf("delivery", "to go")),
+    CategoryIconChoice("meals", "Meals", "set_meal", "Food & Drink", listOf("combo", "plate")),
+    CategoryIconChoice("eggs", "Eggs", "egg_alt", "Food & Drink", listOf("breakfast", "protein")),
+    CategoryIconChoice("liquor", "Liquor", "liquor", "Food & Drink", listOf("alcohol", "bottle")),
+    CategoryIconChoice("juice", "Juice", "local_drink", "Food & Drink", listOf("soda", "soft drink")),
+    CategoryIconChoice("smoking", "Smoking", "smoking_rooms", "Food & Drink", listOf("cigarettes", "tobacco")),
+    CategoryIconChoice("charity_food", "Food Bank", "food_bank", "Food & Drink", listOf("charity", "aid")),
+    CategoryIconChoice("farmers_market", "Farmers Market", "shopping_basket", "Food & Drink", listOf("produce", "basket")),
+
+    CategoryIconChoice("rent", "Rent", "home", "Home & Bills", listOf("house", "housing")),
+    CategoryIconChoice("mortgage", "Mortgage", "house", "Home & Bills", listOf("loan", "house")),
+    CategoryIconChoice("apartment", "Apartment", "apartment", "Home & Bills", listOf("flat")),
+    CategoryIconChoice("bedroom", "Bedroom", "bed", "Home & Bills", listOf("sleep")),
+    CategoryIconChoice("furniture", "Furniture", "chair", "Home & Bills", listOf("sofa", "table")),
+    CategoryIconChoice("kitchen", "Kitchen", "kitchen", "Home & Bills", listOf("appliances", "home")),
+    CategoryIconChoice("laundry", "Laundry", "local_laundry_service", "Home & Bills", listOf("wash", "clothes")),
+    CategoryIconChoice("cleaning", "Cleaning", "cleaning_services", "Home & Bills", listOf("maid", "housekeeping")),
+    CategoryIconChoice("electricity", "Electricity", "bolt", "Home & Bills", listOf("power", "energy")),
+    CategoryIconChoice("water", "Water", "water_drop", "Home & Bills", listOf("utility")),
+    CategoryIconChoice("internet", "Internet", "wifi", "Home & Bills", listOf("broadband", "network")),
+    CategoryIconChoice("router", "Router", "router", "Home & Bills", listOf("internet", "modem")),
+    CategoryIconChoice("mobile", "Mobile", "phone_iphone", "Home & Bills", listOf("cell", "phone")),
+    CategoryIconChoice("devices", "Devices", "devices", "Home & Bills", listOf("electronics")),
+    CategoryIconChoice("television", "Television", "tv", "Home & Bills", listOf("screen")),
+    CategoryIconChoice("repairs", "Repairs", "handyman", "Home & Bills", listOf("maintenance", "fix")),
+    CategoryIconChoice("tools", "Tools", "build", "Home & Bills", listOf("repair", "equipment")),
+    CategoryIconChoice("construction", "Construction", "construction", "Home & Bills", listOf("building", "renovation")),
+    CategoryIconChoice("insurance", "Insurance", "shield", "Home & Bills", listOf("coverage", "protection")),
+    CategoryIconChoice("taxes", "Taxes", "receipt_long", "Home & Bills", listOf("tax", "government")),
+
+    CategoryIconChoice("car", "Car", "directions_car", "Transport & Travel", listOf("vehicle", "auto")),
+    CategoryIconChoice("taxi", "Taxi", "local_taxi", "Transport & Travel", listOf("cab", "ride")),
+    CategoryIconChoice("bike", "Bike", "two_wheeler", "Transport & Travel", listOf("motorbike", "scooter")),
+    CategoryIconChoice("bus", "Bus", "directions_bus", "Transport & Travel", listOf("coach")),
+    CategoryIconChoice("train", "Train", "train", "Transport & Travel", listOf("rail")),
+    CategoryIconChoice("subway", "Subway", "subway", "Transport & Travel", listOf("metro")),
+    CategoryIconChoice("tram", "Tram", "tram", "Transport & Travel", listOf("streetcar")),
+    CategoryIconChoice("fuel", "Fuel", "local_gas_station", "Transport & Travel", listOf("gas", "petrol")),
+    CategoryIconChoice("parking", "Parking", "local_parking", "Transport & Travel", listOf("garage")),
+    CategoryIconChoice("car_repair", "Car Repair", "car_repair", "Transport & Travel", listOf("mechanic")),
+    CategoryIconChoice("car_wash", "Car Wash", "local_car_wash", "Transport & Travel", listOf("clean")),
+    CategoryIconChoice("flight", "Flight", "flight", "Transport & Travel", listOf("airplane", "plane")),
+    CategoryIconChoice("hotel", "Hotel", "hotel", "Transport & Travel", listOf("stay", "room")),
+    CategoryIconChoice("luggage", "Luggage", "luggage", "Transport & Travel", listOf("bags", "travel")),
+    CategoryIconChoice("commute", "Commute", "commute", "Transport & Travel", listOf("work travel")),
+    CategoryIconChoice("boat", "Boat", "directions_boat", "Transport & Travel", listOf("ship", "ferry")),
+    CategoryIconChoice("navigation", "Navigation", "explore", "Transport & Travel", listOf("direction", "gps")),
+    CategoryIconChoice("shuttle", "Shuttle", "airport_shuttle", "Transport & Travel", listOf("van")),
+    CategoryIconChoice("vacation", "Vacation", "beach_access", "Transport & Travel", listOf("beach", "holiday")),
+    CategoryIconChoice("camping_trip", "Camping", "camping", "Transport & Travel", listOf("outdoors")),
+
+    CategoryIconChoice("shopping", "Shopping", "shopping_cart", "Shopping & Lifestyle", listOf("buy", "store")),
+    CategoryIconChoice("bags", "Bags", "shopping_bag", "Shopping & Lifestyle", listOf("purchases")),
+    CategoryIconChoice("clothes", "Clothes", "checkroom", "Shopping & Lifestyle", listOf("fashion", "wardrobe")),
+    CategoryIconChoice("gifts", "Gifts", "card_giftcard", "Shopping & Lifestyle", listOf("present")),
+    CategoryIconChoice("coupons", "Coupons", "redeem", "Shopping & Lifestyle", listOf("discount", "voucher")),
+    CategoryIconChoice("jewelry", "Jewelry", "diamond", "Shopping & Lifestyle", listOf("luxury")),
+    CategoryIconChoice("beauty", "Beauty", "spa", "Shopping & Lifestyle", listOf("salon", "care")),
+    CategoryIconChoice("self_care", "Self Care", "self_care", "Shopping & Lifestyle", listOf("wellness")),
+    CategoryIconChoice("fashion", "Fashion", "style", "Shopping & Lifestyle", listOf("trend", "clothes")),
+    CategoryIconChoice("store", "Store", "storefront", "Shopping & Lifestyle", listOf("shop")),
+    CategoryIconChoice("art", "Art", "palette", "Shopping & Lifestyle", listOf("creative", "design")),
+    CategoryIconChoice("painting", "Painting", "brush", "Shopping & Lifestyle", listOf("paint")),
+    CategoryIconChoice("watch", "Watch", "watch", "Shopping & Lifestyle", listOf("timepiece")),
+    CategoryIconChoice("celebration", "Celebration", "celebration", "Shopping & Lifestyle", listOf("party", "holiday")),
+    CategoryIconChoice("pets", "Pets", "pets", "Shopping & Lifestyle", listOf("animals", "pet care")),
+    CategoryIconChoice("flowers", "Flowers", "local_florist", "Shopping & Lifestyle", listOf("bouquet")),
+
+    CategoryIconChoice("health", "Health", "favorite", "Health & Family", listOf("wellbeing")),
+    CategoryIconChoice("hospital", "Hospital", "local_hospital", "Health & Family", listOf("clinic", "doctor")),
+    CategoryIconChoice("medical", "Medical", "medical_services", "Health & Family", listOf("care")),
+    CategoryIconChoice("pharmacy", "Pharmacy", "medication", "Health & Family", listOf("medicine")),
+    CategoryIconChoice("fitness", "Fitness", "fitness_center", "Health & Family", listOf("gym", "exercise")),
+    CategoryIconChoice("childcare", "Childcare", "child_care", "Health & Family", listOf("kids", "baby")),
+    CategoryIconChoice("family", "Family", "family_restroom", "Health & Family", listOf("household")),
+    CategoryIconChoice("education", "Education", "school", "Health & Family", listOf("study", "college")),
+    CategoryIconChoice("books", "Books", "menu_book", "Health & Family", listOf("reading")),
+    CategoryIconChoice("library", "Library", "local_library", "Health & Family", listOf("books")),
+    CategoryIconChoice("volunteering", "Volunteering", "volunteer_activism", "Health & Family", listOf("charity", "giving")),
+    CategoryIconChoice("soccer", "Soccer", "sports_soccer", "Health & Family", listOf("football", "sport")),
+    CategoryIconChoice("basketball", "Basketball", "sports_basketball", "Health & Family", listOf("sport")),
+    CategoryIconChoice("tennis", "Tennis", "sports_tennis", "Health & Family", listOf("sport")),
+    CategoryIconChoice("running", "Running", "directions_run", "Health & Family", listOf("jogging", "sport")),
+    CategoryIconChoice("prayer", "Prayer", "church", "Health & Family", listOf("religion", "spiritual")),
+
+    CategoryIconChoice("salary", "Salary", "payments", "Work & Finance", listOf("income", "paycheck")),
+    CategoryIconChoice("wallet", "Wallet", "account_balance_wallet", "Work & Finance", listOf("cash")),
+    CategoryIconChoice("bank", "Bank", "account_balance", "Work & Finance", listOf("finance")),
+    CategoryIconChoice("card", "Card", "credit_card", "Work & Finance", listOf("debit", "credit")),
+    CategoryIconChoice("receipt", "Receipt", "receipt_long", "Work & Finance", listOf("bill", "invoice")),
+    CategoryIconChoice("quotes", "Quote", "request_quote", "Work & Finance", listOf("estimate")),
+    CategoryIconChoice("price_check", "Price Check", "price_check", "Work & Finance", listOf("pricing")),
+    CategoryIconChoice("sales", "Sales", "sell", "Work & Finance", listOf("selling")),
+    CategoryIconChoice("paid", "Paid", "paid", "Work & Finance", listOf("settled")),
+    CategoryIconChoice("work", "Work", "work", "Work & Finance", listOf("job", "career")),
+    CategoryIconChoice("business", "Business", "business_center", "Work & Finance", listOf("office", "briefcase")),
+    CategoryIconChoice("investing", "Investing", "trending_up", "Work & Finance", listOf("stocks", "growth")),
+    CategoryIconChoice("analytics", "Analytics", "show_chart", "Work & Finance", listOf("report", "graph")),
+    CategoryIconChoice("budget", "Budget", "pie_chart", "Work & Finance", listOf("plan", "finance")),
+    CategoryIconChoice("calculator", "Calculator", "calculate", "Work & Finance", listOf("math")),
+    CategoryIconChoice("freelance", "Freelance", "edit", "Work & Finance", listOf("contract", "work")),
+    CategoryIconChoice("subscriptions", "Subscriptions", "subscriptions", "Work & Finance", listOf("recurring", "membership")),
+    CategoryIconChoice("cash", "Cash", "payments", "Work & Finance", listOf("money")),
+    CategoryIconChoice("debt", "Debt", "credit_card", "Work & Finance", listOf("loan", "borrow")),
+    CategoryIconChoice("refund", "Refund", "request_quote", "Work & Finance", listOf("return", "money back")),
+
+    CategoryIconChoice("movies", "Movies", "movie", "Entertainment & Tech", listOf("cinema")),
+    CategoryIconChoice("comedy", "Comedy", "theater_comedy", "Entertainment & Tech", listOf("shows")),
+    CategoryIconChoice("gaming", "Gaming", "sports_esports", "Entertainment & Tech", listOf("games", "console")),
+    CategoryIconChoice("music", "Music", "music_note", "Entertainment & Tech", listOf("audio")),
+    CategoryIconChoice("headphones", "Headphones", "headphones", "Entertainment & Tech", listOf("audio", "music")),
+    CategoryIconChoice("live_tv", "Live TV", "live_tv", "Entertainment & Tech", listOf("streaming")),
+    CategoryIconChoice("video", "Video", "smart_display", "Entertainment & Tech", listOf("youtube", "streaming")),
+    CategoryIconChoice("computer", "Computer", "computer", "Entertainment & Tech", listOf("pc")),
+    CategoryIconChoice("smartphone", "Smartphone", "smartphone", "Entertainment & Tech", listOf("phone", "device")),
+    CategoryIconChoice("photo", "Photography", "photo_camera", "Entertainment & Tech", listOf("camera", "pictures")),
+    CategoryIconChoice("park", "Park", "park", "Entertainment & Tech", listOf("outdoors")),
+    CategoryIconChoice("forest", "Forest", "forest", "Entertainment & Tech", listOf("nature")),
+    CategoryIconChoice("hiking", "Hiking", "hiking", "Entertainment & Tech", listOf("outdoors", "trail")),
+    CategoryIconChoice("globe", "Global", "public", "Entertainment & Tech", listOf("world", "internet")),
+    CategoryIconChoice("events", "Events", "event", "Entertainment & Tech", listOf("ticket", "show")),
+    CategoryIconChoice("sports", "Sports", "sports_soccer", "Entertainment & Tech", listOf("games", "activity")),
 )
 
-val categoryColorChoices = listOf(
-    "#5EBB4A",
-    "#2D9CDB",
-    "#9AAF47",
-    "#4FAF33",
-    "#F2994A",
-    "#EB5757",
-    "#BB6BD9",
-    "#56CCF2",
-    "#F2C94C",
-    "#6FCF97",
-    "#8D6E63",
-    "#5C6BC0",
-    "#FF6B6B",
-    "#FF8E72",
-    "#FFB347",
-    "#FFD166",
-    "#06D6A0",
-    "#118AB2",
-    "#3A86FF",
-    "#4361EE",
-    "#7209B7",
-    "#B5179E",
-    "#E76F51",
-    "#F4A261",
-    "#2A9D8F",
-    "#457B9D",
-    "#A8DADC",
-    "#E9C46A",
-    "#90BE6D",
-    "#577590",
-    "#264653",
-    "#1D3557",
-    "#355070",
-    "#6D597A",
-    "#B56576",
-    "#E56B6F",
-    "#EAAC8B",
-    "#D4A373",
-    "#7F5539",
-    "#283618",
-    "#606C38",
-    "#386641",
-    "#588157",
-    "#A3B18A",
-    "#A7C957",
-    "#0081A7",
-    "#00AFB9",
-    "#48CAE4",
-    "#7B2CBF",
-    "#9D4EDD",
-    "#C77DFF",
-    "#FF5D8F",
-    "#E5383B",
-    "#D00000",
-    "#FF7F51",
-    "#F9844A",
-    "#F8961E",
-    "#43AA8B",
-    "#4D908E",
-    "#277DA1",
+private val categoryIconAliases = mapOf(
+    "fastfood" to "food",
+    "directions_transit" to "transportation",
+    "cookie" to "misc",
+    "attach_money" to "income",
+    "timeline" to "trends",
+    "money_off" to "bills",
+    "add" to "misc",
+    "home" to "rent",
+    "shopping_cart" to "shopping",
+    "favorite" to "health",
+    "star" to "celebration",
+    "search" to "support",
+    "edit" to "freelance",
+    "delete" to "storage",
+    "info" to "information",
+    "help" to "support",
+    "call" to "phone",
+    "email" to "email",
+    "send" to "transfer",
+    "place" to "location",
+    "check_circle" to "done",
+    "lock" to "security",
+    "more_vert" to "more",
+    "camera" to "camera",
+    "gallery" to "photos",
+    "agenda" to "planner",
+    "manage" to "services",
+    "map" to "map",
+    "my_places" to "location",
+    "week" to "calendar",
+    "calendar_alt" to "calendar",
+    "history" to "history",
+    "camera_roll" to "photos",
+    "save" to "savings",
+    "share" to "share",
+    "compass" to "compass",
+    "directions" to "navigation",
+    "day" to "day",
+    "sort" to "storage",
+    "view" to "view",
+    "help_drawable" to "support",
+    "info_drawable" to "information",
+    "settings_drawable" to "settings",
 )
+
+private val categoryIconChoiceByKey = categoryIconChoices.associateBy { it.key }
+
+private fun fallbackIconKey(fallbackCategoryKey: String): String = when (fallbackCategoryKey) {
+    CATEGORY_KEY_FOOD -> "food"
+    CATEGORY_KEY_TRANSPORTATION -> "transportation"
+    CATEGORY_KEY_OTHERS -> "misc"
+    CATEGORY_KEY_INCOME -> "income"
+    else -> defaultCategoryIconKey
+}
+
+fun resolveCategoryIconChoice(
+    iconKey: String,
+    fallbackCategoryKey: String = "",
+): CategoryIconChoice {
+    val normalizedKey = iconKey.trim().ifBlank { fallbackIconKey(fallbackCategoryKey) }
+    val canonicalKey = categoryIconAliases[normalizedKey] ?: normalizedKey
+    return categoryIconChoiceByKey[canonicalKey]
+        ?: categoryIconChoiceByKey[fallbackIconKey(fallbackCategoryKey)]
+        ?: categoryIconChoiceByKey.getValue(defaultCategoryIconKey)
+}
+
+fun matchesCategoryIconChoice(
+    choice: CategoryIconChoice,
+    query: String,
+): Boolean {
+    if (query.isBlank()) return true
+    val normalizedQuery = query.trim().lowercase()
+    return choice.label.lowercase().contains(normalizedQuery) ||
+        choice.key.lowercase().contains(normalizedQuery) ||
+        choice.ligature.lowercase().contains(normalizedQuery) ||
+        choice.group.lowercase().contains(normalizedQuery) ||
+        choice.keywords.any { it.lowercase().contains(normalizedQuery) }
+}
+
+val categoryColorCatalog = listOf(
+    CategoryColorOption("#FFD6E7", "Rose 100", "Rose", listOf("pink", "light")),
+    CategoryColorOption("#FFAFCC", "Rose 200", "Rose", listOf("pink", "soft")),
+    CategoryColorOption("#FF5D8F", "Rose 500", "Rose", listOf("pink")),
+    CategoryColorOption("#E5383B", "Crimson 700", "Rose", listOf("red", "bold")),
+
+    CategoryColorOption("#FEE8D6", "Peach 100", "Orange", listOf("soft")),
+    CategoryColorOption("#EAAC8B", "Apricot 200", "Orange", listOf("warm")),
+    CategoryColorOption("#F4A261", "Apricot 400", "Orange", listOf("warm")),
+    CategoryColorOption("#F8961E", "Orange 600", "Orange", listOf("amber")),
+
+    CategoryColorOption("#FFF1C7", "Sun 100", "Yellow", listOf("light")),
+    CategoryColorOption("#FFD166", "Gold 200", "Yellow", listOf("sand")),
+    CategoryColorOption("#F9C74F", "Gold 400", "Yellow", listOf("bright")),
+    CategoryColorOption("#E9C46A", "Amber 500", "Yellow", listOf("mustard")),
+
+    CategoryColorOption("#D8F3DC", "Mint 100", "Green", listOf("soft")),
+    CategoryColorOption("#A3B18A", "Moss 200", "Green", listOf("sage")),
+    CategoryColorOption(defaultCategoryColorHex, "Green 400", "Green", listOf("default")),
+    CategoryColorOption("#52B788", "Green 500", "Green", listOf("leaf")),
+    CategoryColorOption("#386641", "Green 700", "Green", listOf("forest")),
+
+    CategoryColorOption("#D6F5F3", "Aqua 100", "Teal", listOf("light")),
+    CategoryColorOption("#64DFDF", "Aqua 300", "Teal", listOf("fresh")),
+    CategoryColorOption("#43AA8B", "Teal 500", "Teal", listOf("sea")),
+    CategoryColorOption("#0FA3B1", "Teal 700", "Teal", listOf("deep")),
+
+    CategoryColorOption("#E4F2FF", "Sky 100", "Blue", listOf("light")),
+    CategoryColorOption("#BDE0FE", "Sky 200", "Blue", listOf("soft")),
+    CategoryColorOption("#A2D2FF", "Sky 300", "Blue", listOf("airy")),
+    CategoryColorOption("#4EA8DE", "Blue 500", "Blue", listOf("ocean")),
+    CategoryColorOption("#22577A", "Blue 800", "Blue", listOf("navy")),
+
+    CategoryColorOption("#E3E6FF", "Periwinkle 100", "Indigo", listOf("soft")),
+    CategoryColorOption("#B8C0FF", "Periwinkle 200", "Indigo", listOf("light")),
+    CategoryColorOption("#5C6BC0", "Indigo 500", "Indigo", listOf("royal")),
+    CategoryColorOption("#4361EE", "Indigo 600", "Indigo", listOf("vivid")),
+    CategoryColorOption("#1D3557", "Indigo 900", "Indigo", listOf("dark")),
+
+    CategoryColorOption("#F0E5FF", "Lilac 100", "Purple", listOf("light")),
+    CategoryColorOption("#CDB4DB", "Lilac 200", "Purple", listOf("soft")),
+    CategoryColorOption("#9D4EDD", "Purple 500", "Purple", listOf("violet")),
+    CategoryColorOption("#6930C3", "Purple 700", "Purple", listOf("deep")),
+
+    CategoryColorOption("#FFE3F2", "Blush 100", "Pink", listOf("soft")),
+    CategoryColorOption("#FFC6FF", "Blush 200", "Pink", listOf("light")),
+    CategoryColorOption("#F72585", "Pink 600", "Pink", listOf("bold")),
+    CategoryColorOption("#B5179E", "Pink 800", "Pink", listOf("magenta")),
+
+    CategoryColorOption("#EAD9CB", "Sand 200", "Brown", listOf("beige")),
+    CategoryColorOption("#D4A373", "Sand 400", "Brown", listOf("tan")),
+    CategoryColorOption("#8D6E63", "Brown 600", "Brown", listOf("earth")),
+    CategoryColorOption("#7F5539", "Brown 800", "Brown", listOf("espresso")),
+
+    CategoryColorOption("#ECEAF3", "Mist 100", "Slate", listOf("light")),
+    CategoryColorOption("#CBC0D3", "Mist 200", "Slate", listOf("soft")),
+    CategoryColorOption("#8E9AAF", "Slate 500", "Slate", listOf("gray")),
+    CategoryColorOption("#577590", "Slate 700", "Slate", listOf("steel")),
+)
+
+val categoryColorChoices = categoryColorCatalog.map { it.hex }
+
+fun resolveCategoryColorOption(colorHex: String): CategoryColorOption? =
+    categoryColorCatalog.firstOrNull { it.hex.equals(colorHex, ignoreCase = true) }
+
+fun matchesCategoryColorOption(
+    option: CategoryColorOption,
+    query: String,
+): Boolean {
+    if (query.isBlank()) return true
+    val normalizedQuery = query.trim().lowercase()
+    return option.label.lowercase().contains(normalizedQuery) ||
+        option.family.lowercase().contains(normalizedQuery) ||
+        option.hex.lowercase().contains(normalizedQuery) ||
+        option.keywords.any { it.lowercase().contains(normalizedQuery) }
+}
+
+private fun categoryVectorForSymbol(symbol: String): ImageVector = when (symbol) {
+    "category" -> Icons.Filled.Category
+    "fastfood" -> Icons.Filled.Fastfood
+    "directions_transit" -> Icons.Filled.DirectionsTransit
+    "attach_money" -> Icons.Filled.AttachMoney
+    "money_off" -> Icons.Filled.MoneyOff
+    "calendar_month" -> Icons.Filled.CalendarMonth
+    "timeline" -> Icons.Filled.Timeline
+    "settings" -> Icons.Filled.Settings
+    "info" -> Icons.Filled.Info
+    "help" -> Icons.Filled.Help
+    "call" -> Icons.Filled.Call
+    "email" -> Icons.Filled.Email
+    "send" -> Icons.AutoMirrored.Filled.Send
+    "place" -> Icons.Filled.Place
+    "check_circle" -> Icons.Filled.CheckCircle
+    "lock" -> Icons.Filled.Lock
+    "more_vert" -> Icons.Filled.MoreVert
+    "camera_alt" -> Icons.Filled.CameraAlt
+    "photo_library" -> Icons.Filled.PhotoLibrary
+    "event_note" -> Icons.Filled.EventNote
+    "build" -> Icons.Filled.Build
+    "map" -> Icons.Filled.Map
+    "history" -> Icons.Filled.History
+    "savings" -> Icons.Filled.Savings
+    "share" -> Icons.Filled.Share
+    "explore" -> Icons.Filled.Explore
+    "calendar_today" -> Icons.Filled.CalendarToday
+    "inventory_2" -> Icons.Filled.Inventory2
+    "visibility" -> Icons.Filled.Visibility
+    "local_grocery_store" -> Icons.Filled.LocalGroceryStore
+    "restaurant" -> Icons.Filled.Restaurant
+    "local_cafe" -> Icons.Filled.LocalCafe
+    "local_bar" -> Icons.Filled.LocalBar
+    "local_pizza" -> Icons.Filled.LocalPizza
+    "bakery_dining" -> Icons.Filled.BakeryDining
+    "icecream" -> Icons.Filled.Icecream
+    "ramen_dining" -> Icons.Filled.RamenDining
+    "breakfast_dining" -> Icons.Filled.BreakfastDining
+    "lunch_dining" -> Icons.Filled.LunchDining
+    "dinner_dining" -> Icons.Filled.DinnerDining
+    "cookie" -> Icons.Filled.Cookie
+    "takeout_dining" -> Icons.Filled.TakeoutDining
+    "set_meal" -> Icons.Filled.SetMeal
+    "egg_alt" -> Icons.Filled.EggAlt
+    "liquor" -> Icons.Filled.Liquor
+    "local_drink" -> Icons.Filled.LocalDrink
+    "smoking_rooms" -> Icons.Filled.SmokingRooms
+    "food_bank" -> Icons.Filled.FoodBank
+    "shopping_basket" -> Icons.Filled.ShoppingBasket
+    "home" -> Icons.Filled.Home
+    "house" -> Icons.Filled.House
+    "apartment" -> Icons.Filled.Apartment
+    "bed" -> Icons.Filled.Bed
+    "chair" -> Icons.Filled.Chair
+    "kitchen" -> Icons.Filled.Kitchen
+    "local_laundry_service" -> Icons.Filled.LocalLaundryService
+    "cleaning_services" -> Icons.Filled.CleaningServices
+    "bolt" -> Icons.Filled.Bolt
+    "water_drop" -> Icons.Filled.WaterDrop
+    "wifi" -> Icons.Filled.Wifi
+    "router" -> Icons.Filled.Router
+    "phone_iphone" -> Icons.Filled.PhoneIphone
+    "devices" -> Icons.Filled.Devices
+    "tv" -> Icons.Filled.Tv
+    "handyman" -> Icons.Filled.Handyman
+    "construction" -> Icons.Filled.Construction
+    "shield" -> Icons.Filled.Shield
+    "receipt_long" -> Icons.Filled.ReceiptLong
+    "directions_car" -> Icons.Filled.DirectionsCar
+    "local_taxi" -> Icons.Filled.LocalTaxi
+    "two_wheeler" -> Icons.Filled.TwoWheeler
+    "directions_bus" -> Icons.Filled.DirectionsBus
+    "train" -> Icons.Filled.Train
+    "subway" -> Icons.Filled.Subway
+    "tram" -> Icons.Filled.Tram
+    "local_gas_station" -> Icons.Filled.LocalGasStation
+    "local_parking" -> Icons.Filled.LocalParking
+    "car_repair" -> Icons.Filled.CarRepair
+    "local_car_wash" -> Icons.Filled.LocalCarWash
+    "flight" -> Icons.Filled.Flight
+    "hotel" -> Icons.Filled.Hotel
+    "luggage" -> Icons.Filled.Luggage
+    "commute" -> Icons.Filled.Commute
+    "directions_boat" -> Icons.Filled.DirectionsBoat
+    "airport_shuttle" -> Icons.Filled.AirportShuttle
+    "beach_access" -> Icons.Filled.BeachAccess
+    "camping" -> Icons.Filled.Forest
+    "shopping_cart" -> Icons.Filled.ShoppingCart
+    "shopping_bag" -> Icons.Filled.ShoppingBag
+    "checkroom" -> Icons.Filled.Checkroom
+    "card_giftcard" -> Icons.Filled.CardGiftcard
+    "redeem" -> Icons.Filled.Redeem
+    "diamond" -> Icons.Filled.Diamond
+    "spa" -> Icons.Filled.Spa
+    "self_care" -> Icons.Filled.SelfImprovement
+    "style" -> Icons.Filled.Style
+    "storefront" -> Icons.Filled.Storefront
+    "palette" -> Icons.Filled.Palette
+    "brush" -> Icons.Filled.Brush
+    "watch" -> Icons.Filled.Watch
+    "celebration" -> Icons.Filled.Celebration
+    "pets" -> Icons.Filled.Pets
+    "local_florist" -> Icons.Filled.LocalFlorist
+    "favorite" -> Icons.Filled.Favorite
+    "local_hospital" -> Icons.Filled.LocalHospital
+    "medical_services" -> Icons.Filled.MedicalServices
+    "medication" -> Icons.Filled.Medication
+    "fitness_center" -> Icons.Filled.FitnessCenter
+    "child_care" -> Icons.Filled.ChildCare
+    "family_restroom" -> Icons.Filled.FamilyRestroom
+    "school" -> Icons.Filled.School
+    "menu_book" -> Icons.Filled.MenuBook
+    "local_library" -> Icons.Filled.LocalLibrary
+    "volunteer_activism" -> Icons.Filled.VolunteerActivism
+    "sports_soccer" -> Icons.Filled.SportsSoccer
+    "sports_basketball" -> Icons.Filled.SportsBasketball
+    "sports_tennis" -> Icons.Filled.SportsTennis
+    "directions_run" -> Icons.Filled.DirectionsRun
+    "church" -> Icons.Filled.AutoStories
+    "payments" -> Icons.Filled.Payments
+    "account_balance_wallet" -> Icons.Filled.AccountBalanceWallet
+    "account_balance" -> Icons.Filled.AccountBalance
+    "credit_card" -> Icons.Filled.CreditCard
+    "request_quote" -> Icons.Filled.RequestQuote
+    "price_check" -> Icons.Filled.PriceCheck
+    "sell" -> Icons.Filled.Sell
+    "paid" -> Icons.Filled.Paid
+    "work" -> Icons.Filled.Work
+    "business_center" -> Icons.Filled.BusinessCenter
+    "trending_up" -> Icons.Filled.TrendingUp
+    "show_chart" -> Icons.Filled.ShowChart
+    "pie_chart" -> Icons.Filled.PieChart
+    "calculate" -> Icons.Filled.Calculate
+    "edit" -> Icons.Filled.Edit
+    "subscriptions" -> Icons.Filled.Subscriptions
+    "movie" -> Icons.Filled.Movie
+    "theater_comedy" -> Icons.Filled.TheaterComedy
+    "sports_esports" -> Icons.Filled.SportsEsports
+    "music_note" -> Icons.Filled.MusicNote
+    "headphones" -> Icons.Filled.Headphones
+    "live_tv" -> Icons.Filled.LiveTv
+    "smart_display" -> Icons.Filled.SmartDisplay
+    "computer" -> Icons.Filled.Computer
+    "smartphone" -> Icons.Filled.Smartphone
+    "photo_camera" -> Icons.Filled.PhotoCamera
+    "park" -> Icons.Filled.Park
+    "forest" -> Icons.Filled.Forest
+    "hiking" -> Icons.Filled.Hiking
+    "public" -> Icons.Filled.Public
+    "event" -> Icons.Filled.Event
+    else -> Icons.Filled.Category
+}
 
 @Composable
-fun categoryIconPainter(
+fun CategoryIcon(
+    iconKey: String,
+    fallbackCategoryKey: String = "",
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    size: Dp = 24.dp,
+) {
+    val resolvedChoice = remember(iconKey, fallbackCategoryKey) {
+        resolveCategoryIconChoice(iconKey = iconKey, fallbackCategoryKey = fallbackCategoryKey)
+    }
+    Icon(
+        imageVector = categoryVectorForSymbol(resolvedChoice.ligature),
+        contentDescription = null,
+        modifier = modifier.size(size),
+        tint = tint,
+    )
+}
+
+@Composable
+fun categoryPlaceholderPainter(
     iconKey: String,
     fallbackCategoryKey: String = "",
 ): Painter {
-    val choice = categoryIconChoices.firstOrNull { it.key == iconKey }
-    choice?.iconVector?.let { return rememberVectorPainter(it) }
-    choice?.iconRes?.let { return painterResource(id = it) }
-
-    val fallbackRes = when (fallbackCategoryKey) {
-        CATEGORY_KEY_FOOD -> R.drawable.baseline_fastfood_24
-        CATEGORY_KEY_TRANSPORTATION -> R.drawable.baseline_directions_transit_24
-        CATEGORY_KEY_OTHERS -> R.drawable.baseline_cookie_24
-        CATEGORY_KEY_INCOME -> R.drawable.baseline_attach_money_24
-        else -> R.drawable.baseline_cookie_24
+    val resolvedChoice = remember(iconKey, fallbackCategoryKey) {
+        resolveCategoryIconChoice(iconKey = iconKey, fallbackCategoryKey = fallbackCategoryKey)
     }
-    return painterResource(id = fallbackRes)
+    return rememberVectorPainter(categoryVectorForSymbol(resolvedChoice.ligature))
 }
 
 @Composable

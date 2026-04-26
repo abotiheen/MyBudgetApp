@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -56,7 +57,10 @@ class ItemDatesViewModel(
     }
 
     val availableCategories: StateFlow<List<BudgetCategory>> = itemRepository
-        .getCategoriesByType(type = type, includeArchived = false)
+        .getAllCategories(includeArchived = true)
+        .map { categories ->
+            categories.filter { it.type == type }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),

@@ -44,7 +44,6 @@ import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object TotalIncomeDestination : NavigationDestination {
     override val route = "TotalIncome"
@@ -125,10 +124,6 @@ fun TotalIncomeBody(
     val accent = if (uiState.isIncome) BudgetTheme.extendedColors.income else BudgetTheme.extendedColors.danger
     val totalValue = if (uiState.isIncome) uiState.totalIncome else uiState.totalSpending
     val largestTransaction = items.maxByOrNull { it.amountValue }?.totalCost ?: totalValue
-    val heroIconPainter = categoryIconPainter(
-        iconKey = if (uiState.isIncome) "attach_money" else "money_off",
-        fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
-    )
 
     LazyColumn(
         modifier = modifier,
@@ -158,7 +153,8 @@ fun TotalIncomeBody(
                 },
                 badgeLabel = if (uiState.isThisMonthCurrent) "Live month" else "Archived",
                 accent = accent,
-                iconPainter = heroIconPainter,
+                iconKey = if (uiState.isIncome) "income" else "bills",
+                fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
                 chips = listOf(
                     DetailHeroChipUi("Entries", items.size.toString()),
                     DetailHeroChipUi("Largest", largestTransaction, isMonetary = true),
@@ -185,7 +181,8 @@ fun TotalIncomeBody(
                         "Expense records will show up here as soon as you add them."
                     },
                     accent = accent,
-                    iconPainter = heroIconPainter,
+                    iconKey = if (uiState.isIncome) "income" else "bills",
+                    fallbackCategoryKey = if (uiState.isIncome) "income" else "others",
                 )
             }
         } else {
@@ -255,7 +252,8 @@ private fun TransactionEntryRow(
             "${item.categoryLabel} • ${item.date}"
         },
         imagePath = item.imagePath,
-        iconPainter = categoryIconPainter(item.categoryIconKey, item.category),
+        iconKey = item.categoryIconKey,
+        fallbackCategoryKey = item.category,
         accent = accent,
         onOpen = onOpen,
         onDelete = onDelete,

@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +38,8 @@ import coil.compose.AsyncImage
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
+import com.example.mybudgetapp.ui.widgets.CategoryIcon
+import com.example.mybudgetapp.ui.widgets.categoryPlaceholderPainter
 
 data class DetailHeroChipUi(
     val label: String,
@@ -55,7 +56,8 @@ fun DetailCollectionHero(
     subtitle: String,
     badgeLabel: String,
     accent: Color,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String = "",
     chips: List<DetailHeroChipUi>,
     modifier: Modifier = Modifier,
 ) {
@@ -91,10 +93,11 @@ fun DetailCollectionHero(
                         modifier = Modifier.size(48.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = null,
+                        CategoryIcon(
+                            iconKey = iconKey,
+                            fallbackCategoryKey = fallbackCategoryKey,
                             tint = accent,
+                            size = 24.dp,
                         )
                     }
                 }
@@ -215,7 +218,8 @@ fun DetailEmptyStateCard(
     title: String,
     message: String,
     accent: Color,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String = "",
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -237,10 +241,11 @@ fun DetailEmptyStateCard(
                     modifier = Modifier.size(44.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painter = iconPainter,
-                        contentDescription = null,
+                    CategoryIcon(
+                        iconKey = iconKey,
+                        fallbackCategoryKey = fallbackCategoryKey,
                         tint = accent,
+                        size = 22.dp,
                     )
                 }
             }
@@ -266,7 +271,8 @@ fun DetailEntryRow(
     amount: String,
     meta: String,
     imagePath: String?,
-    iconPainter: Painter,
+    iconKey: String,
+    fallbackCategoryKey: String = "",
     accent: Color,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
@@ -295,8 +301,8 @@ fun DetailEntryRow(
                         model = imagePath,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        placeholder = iconPainter,
-                        error = iconPainter,
+                        placeholder = categoryPlaceholderPainter(iconKey, fallbackCategoryKey),
+                        error = categoryPlaceholderPainter(iconKey, fallbackCategoryKey),
                         modifier = Modifier
                             .size(52.dp)
                             .clip(RoundedCornerShape(BudgetTheme.radii.md)),
@@ -306,10 +312,11 @@ fun DetailEntryRow(
                         modifier = Modifier.size(52.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = null,
+                        CategoryIcon(
+                            iconKey = iconKey,
+                            fallbackCategoryKey = fallbackCategoryKey,
                             tint = accent,
+                            size = 24.dp,
                         )
                     }
                 }

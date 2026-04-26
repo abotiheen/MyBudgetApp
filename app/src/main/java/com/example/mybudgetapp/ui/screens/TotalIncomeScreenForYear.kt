@@ -53,7 +53,6 @@ import com.example.mybudgetapp.ui.widgets.ItemCard
 import com.example.mybudgetapp.ui.widgets.SegmentedTextLabel
 import com.example.mybudgetapp.ui.widgets.SectionHeading
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
-import com.example.mybudgetapp.ui.widgets.categoryIconPainter
 
 object TotalIncomeDestinationForYear : NavigationDestination {
     override val route = "TotalIncomeForYear"
@@ -219,7 +218,8 @@ private fun TotalIncomeYearBody(
                             item.month,
                         )
                     },
-                    iconPainter = categoryIconPainter(item.categoryIconKey, item.category),
+                    iconKey = item.categoryIconKey,
+                    fallbackCategoryKey = item.category,
                 )
             }
         }
