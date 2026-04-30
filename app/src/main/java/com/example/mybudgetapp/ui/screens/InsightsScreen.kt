@@ -1,7 +1,9 @@
 package com.example.mybudgetapp.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,15 +21,30 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -35,6 +52,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,24 +64,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
+import com.example.mybudgetapp.domain.insights.CategoryDelta
+import com.example.mybudgetapp.domain.insights.InsightAction
+import com.example.mybudgetapp.domain.insights.InsightSeverity
+import com.example.mybudgetapp.domain.insights.InsightUi
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
 import com.example.mybudgetapp.ui.shared.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.CategoryTotalUi
-import com.example.mybudgetapp.ui.viewmodels.ComparisonDirection
-import com.example.mybudgetapp.ui.viewmodels.InsightScope
 import com.example.mybudgetapp.ui.viewmodels.InsightFilterCategoryUi
+import com.example.mybudgetapp.ui.viewmodels.InsightScope
+import com.example.mybudgetapp.ui.viewmodels.InsightsEmptyState
 import com.example.mybudgetapp.ui.viewmodels.InsightsUiState
 import com.example.mybudgetapp.ui.viewmodels.InsightsViewModel
-import com.example.mybudgetapp.ui.viewmodels.StatInsightUi
-import com.example.mybudgetapp.ui.viewmodels.TrendPointUi
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
@@ -71,6 +92,8 @@ import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.CategoryIcon
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 object InsightsDestination : NavigationDestination {
     override val route = "Insights"
@@ -91,7 +114,7 @@ fun InsightsScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val viewModel: InsightsViewModel = viewModel(factory = AppViewModelProvider.Factory)
-    val uiState = viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -107,18 +130,23 @@ fun InsightsScreen(
         },
     ) { paddingValues ->
         BudgetBackdrop(modifier = Modifier.padding(paddingValues)) {
-            InsightsBody(
-                uiState = uiState.value,
+            InsightsV2Screen(
+                uiState = uiState,
                 onOpenFilter = { showFilterSheet = true },
+                onManageCategories = navigateToCategories,
+                onInsightAction = { action ->
+                    if (action is InsightAction.OpenCategory) {
+                        navigateToSpendingOnCategory(action.categoryKey)
+                    }
+                },
                 navigateToSpendingOnCategory = navigateToSpendingOnCategory,
-                navigateToCategories = navigateToCategories,
             )
         }
     }
 
     if (showFilterSheet) {
         InsightsCategoryFilterBottomSheet(
-            categories = uiState.value.availableCategories,
+            categories = uiState.availableCategories,
             onToggleCategory = viewModel::toggleCategory,
             onSelectAll = viewModel::selectAllCategories,
             onClearAll = viewModel::clearAllCategories,
@@ -128,52 +156,38 @@ fun InsightsScreen(
 }
 
 @Composable
-private fun InsightsBody(
-    modifier: Modifier = Modifier,
+fun InsightsV2Screen(
     uiState: InsightsUiState,
     onOpenFilter: () -> Unit,
+    onManageCategories: () -> Unit,
+    onInsightAction: (InsightAction?) -> Unit,
     navigateToSpendingOnCategory: (String) -> Unit,
-    navigateToCategories: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val spacing = BudgetTheme.spacing
-    val allInsights = (uiState.overviewInsights + uiState.habitInsights)
-        .distinctBy { it.title }
-    val topCategory = uiState.categoryTotals.maxByOrNull { it.total }
-    val topShare = if (uiState.totalSpendingAmount > 0) {
-        ((topCategory?.total ?: 0.0) / uiState.totalSpendingAmount).toFloat().coerceIn(0f, 1f)
-    } else {
-        0f
+    if (uiState.isLoading) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(BudgetTheme.spacing.xl),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator()
+        }
+        return
     }
-    val biggestExpense = allInsights.find { it.title.contains("Biggest", ignoreCase = true) }
-    val rateInsight = allInsights.find { it.title.contains("Avg daily", ignoreCase = true) || it.title.contains("Avg monthly", ignoreCase = true) }
-    val rhythmInsight = allInsights.find { it.title.contains("Spending days", ignoreCase = true) || it.title.contains("Active months", ignoreCase = true) }
-    val transactionInsight = allInsights.find { it.title.contains("Avg transaction", ignoreCase = true) }
-    val peakPoint = uiState.trendPoints.maxByOrNull { it.value }
 
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
-            start = spacing.lg,
-            end = spacing.lg,
-            top = spacing.lg,
+            start = BudgetTheme.spacing.lg,
+            end = BudgetTheme.spacing.lg,
+            top = BudgetTheme.spacing.lg,
             bottom = 48.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.lg),
     ) {
         item {
-            InsightsPulseHero(
-                uiState = uiState,
-                topCategory = topCategory,
-                topShare = topShare,
-            )
-        }
-        item {
-            InsightSectionHeader(
-                title = "Where It Went",
-                subtitle = "Category concentration matters more than raw counts when you want to adjust behavior.",
-                actionLabel = "Manage",
-                onAction = navigateToCategories,
-            )
+            InsightsHeroCard(uiState = uiState)
         }
         item {
             InsightsFilterBar(
@@ -182,50 +196,83 @@ private fun InsightsBody(
                 onOpenFilter = onOpenFilter,
             )
         }
-        if (uiState.hasNoIncludedCategories) {
+        uiState.emptyState?.let { emptyState ->
             item {
-                NoCategoriesIncludedCard(onOpenFilter = onOpenFilter)
+                InsightsEmptyStateCard(
+                    emptyState = emptyState,
+                    onPrimaryAction = if (uiState.hasNoIncludedCategories) onOpenFilter else onManageCategories,
+                )
             }
-        } else {
+        }
+        if (uiState.emptyState == null) {
             item {
                 InsightSectionHeader(
-                    title = "What matters",
-                    subtitle = "The signals most people need before diving into transaction lists.",
+                    title = "What needs attention",
+                    subtitle = "Ranked by surprise, usefulness, and whether there is a clear next step.",
                 )
             }
-            item {
-                FocusSignalsRow(
-                    biggestExpense = biggestExpense,
-                    rateInsight = rateInsight,
-                    rhythmInsight = rhythmInsight,
-                )
+            if (uiState.primaryInsights.isEmpty()) {
+                item {
+                    NoUrgentInsightsCard()
+                }
+            } else {
+                items(uiState.primaryInsights, key = { it.id }) { insight ->
+                    InsightCard(
+                        insight = insight,
+                        onAction = onInsightAction,
+                    )
+                }
+            }
+            uiState.savingOpportunity?.let { opportunity ->
+                item {
+                    InsightSectionHeader(
+                        title = "Opportunity",
+                        subtitle = "A realistic place to save without turning the whole budget upside down.",
+                    )
+                }
+                item {
+                    SavingOpportunityCard(
+                        insight = opportunity,
+                        onAction = onInsightAction,
+                    )
+                }
             }
             item {
-                TrendNarrativeCard(
-                    scope = uiState.scope,
-                    point = peakPoint,
-                    comparison = uiState.comparison.summary,
+                InsightSectionHeader(
+                    title = "Trend",
+                    subtitle = uiState.trendAnnotation,
                 )
             }
             item {
                 TrendChartCard(
-                    title = if (uiState.scope == InsightScope.Month) "Daily pace" else "Monthly pace",
-                    subtitle = if (uiState.scope == InsightScope.Month) {
-                        "See which days pushed spending hardest."
-                    } else {
-                        "See which months carried the most weight."
-                    },
+                    title = uiState.trendTitle,
+                    subtitle = uiState.trendSubtitle,
                     points = uiState.trendPoints,
                 )
             }
+            if (uiState.secondaryInsights.isNotEmpty()) {
+                item {
+                    InsightSectionHeader(
+                        title = "More signals",
+                        subtitle = "Secondary patterns that can help explain the period.",
+                    )
+                }
+                items(uiState.secondaryInsights, key = { it.id }) { insight ->
+                    InsightCard(
+                        insight = insight,
+                        onAction = onInsightAction,
+                    )
+                }
+            }
             item {
-                CategoryFocusCard(
-                    topCategory = topCategory,
-                    topShare = topShare,
-                    transactionInsight = transactionInsight,
+                InsightSectionHeader(
+                    title = "Category breakdown",
+                    subtitle = "Use this after the insight cards to inspect the raw distribution.",
+                    actionLabel = "Manage",
+                    onAction = onManageCategories,
                 )
             }
-            items(uiState.categoryTotals) { category ->
+            items(uiState.categoryTotals, key = { it.category }) { category ->
                 CategoryBreakdownRow(
                     category = category,
                     totalSpendingAmount = uiState.totalSpendingAmount,
@@ -237,20 +284,20 @@ private fun InsightsBody(
 }
 
 @Composable
-private fun InsightsPulseHero(
+fun InsightsHeroCard(
     uiState: InsightsUiState,
-    topCategory: CategoryTotalUi?,
-    topShare: Float,
+    modifier: Modifier = Modifier,
 ) {
-    val accent = comparisonAccent(uiState.comparison.direction)
-    val summaryLine = buildSummaryLine(
-        scope = uiState.scope,
-        comparison = uiState.comparison.summary,
-        topCategory = topCategory,
-    )
+    val severityColor = severityColor(uiState.status.severity)
+    val statusIcon = when (uiState.status.severity) {
+        InsightSeverity.Positive -> Icons.AutoMirrored.Filled.TrendingDown
+        InsightSeverity.Neutral -> Icons.AutoMirrored.Filled.TrendingFlat
+        InsightSeverity.Warning,
+        InsightSeverity.Danger -> Icons.AutoMirrored.Filled.TrendingUp
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level2),
@@ -258,7 +305,7 @@ private fun InsightsPulseHero(
         Column(
             modifier = Modifier
                 .background(
-                    brush = Brush.linearGradient(
+                    Brush.linearGradient(
                         colors = listOf(
                             BudgetTheme.extendedColors.heroStart,
                             BudgetTheme.extendedColors.heroEnd,
@@ -276,9 +323,9 @@ private fun InsightsPulseHero(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = if (uiState.scope == InsightScope.Month) "Spending pulse" else "Year pulse",
+                        text = if (uiState.scope == InsightScope.Month) "Insights" else "Year insights",
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.74f),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
                     )
                     Text(
                         text = uiState.periodLabel,
@@ -286,9 +333,9 @@ private fun InsightsPulseHero(
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
-                InsightHeroBadge(
-                    label = if (uiState.comparison.summary.isBlank()) "No comparison" else uiState.comparison.summary,
-                    tint = accent,
+                InsightSeverityPill(
+                    severity = uiState.status.severity,
+                    label = uiState.status.label,
                 )
             }
 
@@ -300,54 +347,52 @@ private fun InsightsPulseHero(
                 unitLabel = "IQD",
             )
 
-            Text(
-                text = summaryLine,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-            )
-
-            Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-                shape = RoundedCornerShape(BudgetTheme.radii.lg),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(
-                    modifier = Modifier.padding(BudgetTheme.spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Surface(
+                    color = severityColor.copy(alpha = 0.14f),
+                    shape = CircleShape,
                 ) {
-                    Text(
-                        text = "Main concentration",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Box(
+                        modifier = Modifier.size(38.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = statusIcon,
+                            contentDescription = null,
+                            tint = severityColor,
+                        )
+                    }
+                }
+                Text(
+                    text = uiState.status.explanation,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+                )
+            }
+
+            uiState.status.monthProgress?.let { progress ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = topCategory?.label ?: "No category yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            BudgetValueText(
-                                text = topCategory?.let { formatCompactCurrencyIraqiDinar(it.total) }
-                                    ?: formatCompactCurrencyIraqiDinar(0.0),
-                                tone = BudgetValueTone.Compact,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unitLabel = "IQD",
-                            )
-                        }
                         Text(
-                            text = "${(topShare * 100).toInt()}%",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
+                            text = "Month progress",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
+                        )
+                        Text(
+                            text = "${(progress * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                     InsightProgressBar(
-                        progress = topShare,
-                        accent = MaterialTheme.colorScheme.primary,
+                        progress = progress,
+                        accent = severityColor,
                     )
                 }
             }
@@ -356,138 +401,198 @@ private fun InsightsPulseHero(
 }
 
 @Composable
-private fun FocusSignalsRow(
-    biggestExpense: StatInsightUi?,
-    rateInsight: StatInsightUi?,
-    rhythmInsight: StatInsightUi?,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-    ) {
-        FocusSignalCard(
-            modifier = Modifier.weight(1f),
-            label = biggestExpense?.title ?: "Biggest expense",
-            value = biggestExpense?.value ?: formatCompactCurrencyIraqiDinar(0.0),
-            note = biggestExpense?.subtitle ?: "No expense yet",
-            accent = BudgetTheme.extendedColors.danger,
-            isMonetary = biggestExpense?.isMonetary ?: true,
-        )
-        FocusSignalCard(
-            modifier = Modifier.weight(1f),
-            label = rateInsight?.title ?: "Spend rate",
-            value = rateInsight?.value ?: formatCompactCurrencyIraqiDinar(0.0),
-            note = rateInsight?.subtitle ?: "No pace yet",
-            accent = BudgetTheme.extendedColors.transit,
-            isMonetary = rateInsight?.isMonetary ?: true,
-        )
-        FocusSignalCard(
-            modifier = Modifier.weight(1f),
-            label = rhythmInsight?.title ?: "Rhythm",
-            value = rhythmInsight?.value ?: "0",
-            note = rhythmInsight?.subtitle ?: "No activity yet",
-            accent = BudgetTheme.extendedColors.food,
-            isMonetary = rhythmInsight?.isMonetary ?: false,
-        )
-    }
-}
-
-@Composable
-private fun FocusSignalCard(
-    label: String,
-    value: String,
-    note: String,
-    accent: Color,
-    isMonetary: Boolean,
+fun InsightCard(
+    insight: InsightUi,
+    onAction: (InsightAction?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    when (insight) {
+        is InsightUi.Forecast -> ForecastInsightCard(insight, onAction, modifier)
+        is InsightUi.BaselineComparison -> BaselineInsightCard(insight, onAction, modifier)
+        is InsightUi.CategoryAnomaly -> CategoryAnomalyCard(insight, onAction, modifier)
+        is InsightUi.SavingOpportunity -> SavingOpportunityCard(insight, onAction, modifier)
+        is InsightUi.DriverAnalysis -> DriverAnalysisCard(insight, onAction, modifier)
+        is InsightUi.RecurringVsFlexible -> RecurringFlexibleCard(insight, onAction, modifier)
+        is InsightUi.TimePattern -> TimePatternCard(insight, onAction, modifier)
+        is InsightUi.SpendingStreak -> SpendingStreakCard(insight, onAction, modifier)
+        is InsightUi.TransactionBehavior -> TransactionBehaviorCard(insight, onAction, modifier)
+        is InsightUi.ConcentrationRisk -> ConcentrationRiskCard(insight, onAction, modifier)
+    }
+}
+
+@Composable
+fun ForecastInsightCard(
+    insight: InsightUi.Forecast,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.QueryStats,
+        actionLabel = "Show pace",
+        onAction = onAction,
         modifier = modifier,
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
+    )
+}
+
+@Composable
+fun BaselineInsightCard(
+    insight: InsightUi.BaselineComparison,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.Assessment,
+        actionLabel = "Compare",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun CategoryAnomalyCard(
+    insight: InsightUi.CategoryAnomaly,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.ReportProblem,
+        actionLabel = "View ${insight.categoryLabel}",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun SavingOpportunityCard(
+    insight: InsightUi.SavingOpportunity,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.Savings,
+        actionLabel = "View ${insight.categoryLabel}",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun DriverAnalysisCard(
+    insight: InsightUi.DriverAnalysis,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.AutoMirrored.Filled.AltRoute,
+        actionLabel = "Show details",
+        onAction = onAction,
+        modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.md),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            BudgetValueText(
-                text = value,
-                tone = BudgetValueTone.Compact,
-                color = accent,
-                unitLabel = if (isMonetary) "IQD" else null,
-            )
-            Text(
-                text = note,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            insight.drivers.forEach { driver ->
+                CategoryDeltaRow(driver = driver)
+            }
         }
     }
 }
 
 @Composable
-private fun TrendNarrativeCard(
-    scope: InsightScope,
-    point: TrendPointUi?,
-    comparison: String,
+fun RecurringFlexibleCard(
+    insight: InsightUi.RecurringVsFlexible,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val peakLabel = when (scope) {
-        InsightScope.Month -> point?.let { "Peak day ${it.label}" } ?: "No peak yet"
-        InsightScope.Year -> point?.let { "Peak month ${it.label}" } ?: "No peak yet"
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BudgetTheme.radii.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
-    ) {
-        Column(
-            modifier = Modifier.padding(BudgetTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-        ) {
-            Text(
-                text = "Pattern read",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = peakLabel,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = if (comparison.isBlank()) {
-                    "Use the chart below to see whether spending was steady or clustered."
-                } else {
-                    "$comparison. The chart below shows where the pressure landed."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.Repeat,
+        actionLabel = "Show details",
+        onAction = onAction,
+        modifier = modifier,
+    )
 }
 
 @Composable
-private fun CategoryFocusCard(
-    topCategory: CategoryTotalUi?,
-    topShare: Float,
-    transactionInsight: StatInsightUi?,
+fun TimePatternCard(
+    insight: InsightUi.TimePattern,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val accent = categoryAccentColor(topCategory?.colorHex.orEmpty(), topCategory?.category.orEmpty())
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.CalendarToday,
+        actionLabel = "See trend",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
 
+@Composable
+fun SpendingStreakCard(
+    insight: InsightUi.SpendingStreak,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.CheckCircle,
+        actionLabel = "See trend",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun TransactionBehaviorCard(
+    insight: InsightUi.TransactionBehavior,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.AutoMirrored.Filled.ReceiptLong,
+        actionLabel = "Show details",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ConcentrationRiskCard(
+    insight: InsightUi.ConcentrationRisk,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TypedInsightCard(
+        insight = insight,
+        icon = Icons.Default.PieChart,
+        actionLabel = "View ${insight.categoryLabel}",
+        onAction = onAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun TypedInsightCard(
+    insight: InsightUi,
+    icon: ImageVector,
+    actionLabel: String,
+    onAction: (InsightAction?) -> Unit,
+    modifier: Modifier = Modifier,
+    extraContent: @Composable (() -> Unit)? = null,
+) {
+    var expanded by rememberSaveable(insight.id) { mutableStateOf(false) }
+    val accent = severityColor(insight.severity)
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.14f)),
         elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
     ) {
         Column(
@@ -496,64 +601,224 @@ private fun CategoryFocusCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Surface(
+                    color = accent.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.md),
+                ) {
+                    Box(
+                        modifier = Modifier.size(44.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = accent,
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Text(
+                            text = insight.text.title,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        InsightSeverityPill(
+                            severity = insight.severity,
+                            compact = true,
+                        )
+                    }
+                    Text(
+                        text = insight.text.value,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = accent,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = insight.text.subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            extraContent?.invoke()
+
+            AnimatedVisibility(visible = expanded) {
+                InsightExplanationSection(insight = insight)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "Top category",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = topCategory?.label ?: "None",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                TextButton(onClick = { expanded = !expanded }) {
+                    Text(if (expanded) "Hide details" else "Why this?")
                 }
-                Text(
-                    text = "${(topShare * 100).toInt()}%",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = accent,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
 
-            BudgetValueText(
-                text = topCategory?.let { formatCompactCurrencyIraqiDinar(it.total) } ?: formatCompactCurrencyIraqiDinar(0.0),
-                tone = BudgetValueTone.Prominent,
-                color = accent,
-                unitLabel = "IQD",
-            )
+                val isNavigationAction = insight.action is InsightAction.OpenCategory
+                val showActionButton = insight.action != null && 
+                    insight.action != InsightAction.None && 
+                    (isNavigationAction || !expanded)
 
-            if (transactionInsight != null) {
-                Surface(
-                    color = accent.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(BudgetTheme.radii.md),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(BudgetTheme.spacing.md),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                if (showActionButton) {
+                    TextButton(
+                        onClick = {
+                            if (isNavigationAction) {
+                                onAction(insight.action)
+                            } else {
+                                expanded = true
+                            }
+                        },
                     ) {
-                        Text(
-                            text = transactionInsight.title,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        BudgetValueText(
-                            text = transactionInsight.value,
-                            tone = BudgetValueTone.Compact,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            unitLabel = if (transactionInsight.isMonetary) "IQD" else null,
-                        )
-                        Text(
-                            text = transactionInsight.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Text(actionLabel)
+                        Spacer(modifier = Modifier.size(4.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun InsightExplanationSheet(
+    insight: InsightUi,
+    modifier: Modifier = Modifier,
+) {
+    InsightExplanationSection(insight = insight, modifier = modifier)
+}
+
+@Composable
+private fun InsightExplanationSection(
+    insight: InsightUi,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        shape = RoundedCornerShape(BudgetTheme.radii.md),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (insight.text.explanation.isNotBlank()) {
+                Text(
+                    text = insight.text.explanation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (insight.text.recommendation.isNotBlank()) {
+                Text(
+                    text = insight.text.recommendation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun InsightSeverityPill(
+    severity: InsightSeverity,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    compact: Boolean = false,
+) {
+    val tint = severityColor(severity)
+    val text = label ?: when (severity) {
+        InsightSeverity.Positive -> "Good"
+        InsightSeverity.Neutral -> "Info"
+        InsightSeverity.Warning -> "Watch"
+        InsightSeverity.Danger -> "High"
+    }
+    Surface(
+        modifier = modifier,
+        color = tint.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(BudgetTheme.radii.pill),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(
+                horizontal = if (compact) 10.dp else 12.dp,
+                vertical = if (compact) 6.dp else 8.dp,
+            ),
+            style = MaterialTheme.typography.labelMedium,
+            color = tint,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+fun InsightProgressBar(
+    progress: Float,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    val animatedProgress = animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 500),
+        label = "insightProgress",
+    )
+
+    FractionProgressBar(
+        progress = animatedProgress.value,
+        fillColor = accent,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        barHeight = 10.dp,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun CategoryDeltaRow(
+    driver: CategoryDelta,
+    modifier: Modifier = Modifier,
+) {
+    val isIncrease = driver.deltaAmount >= 0.0
+    val tint = if (isIncrease) BudgetTheme.extendedColors.danger else BudgetTheme.extendedColors.success
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = tint.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(BudgetTheme.radii.md),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = BudgetTheme.spacing.md, vertical = BudgetTheme.spacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = driver.categoryLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "${if (isIncrease) "+" else "-"}${formatCompactCurrencyIraqiDinar(abs(driver.deltaAmount))} IQD",
+                style = MaterialTheme.typography.labelLarge,
+                color = tint,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -565,7 +830,7 @@ private fun CategoryBreakdownRow(
     onClick: () -> Unit,
 ) {
     val accent = categoryAccentColor(category.colorHex, category.category)
-    val progress = if (totalSpendingAmount > 0) {
+    val progress = if (totalSpendingAmount > 0.0) {
         (category.total / totalSpendingAmount).toFloat().coerceIn(0f, 1f)
     } else {
         0f
@@ -626,7 +891,7 @@ private fun CategoryBreakdownRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "${(progress * 100).toInt()}%",
+                        text = "${(progress * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelLarge,
                         color = accent,
                     )
@@ -647,10 +912,7 @@ private fun CategoryBreakdownRow(
                     }
                 }
             }
-            InsightProgressBar(
-                progress = progress,
-                accent = accent,
-            )
+            InsightProgressBar(progress = progress, accent = accent)
         }
     }
 }
@@ -708,9 +970,10 @@ private fun InsightsFilterBar(
                 }
             }
             if (isFilterActive) {
-                InsightHeroBadge(
+                InsightSeverityPill(
+                    severity = InsightSeverity.Neutral,
                     label = "Filtered",
-                    tint = MaterialTheme.colorScheme.primary,
+                    compact = true,
                 )
             }
         }
@@ -718,8 +981,9 @@ private fun InsightsFilterBar(
 }
 
 @Composable
-private fun NoCategoriesIncludedCard(
-    onOpenFilter: () -> Unit,
+private fun InsightsEmptyStateCard(
+    emptyState: InsightsEmptyState,
+    onPrimaryAction: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -731,22 +995,54 @@ private fun NoCategoriesIncludedCard(
             modifier = Modifier.padding(BudgetTheme.spacing.xl),
             verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
         ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
             Text(
-                text = "No categories included",
+                text = emptyState.title,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Choose at least one category to restore insight totals, patterns, and breakdowns.",
+                text = emptyState.message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(
-                onClick = onOpenFilter,
+                onClick = onPrimaryAction,
                 shape = RoundedCornerShape(BudgetTheme.radii.lg),
             ) {
-                Text("Choose categories")
+                Text(emptyState.actionLabel)
             }
+        }
+    }
+}
+
+@Composable
+private fun NoUrgentInsightsCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        tonalElevation = BudgetTheme.elevations.level1,
+        shadowElevation = BudgetTheme.elevations.level1,
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = "No urgent attention needed",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Spending is not showing a strong anomaly yet. The trend and categories below still show the raw context.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -819,9 +1115,7 @@ private fun InsightsCategoryFilterBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm)) {
                 OutlinedButton(
                     onClick = onSelectAll,
                     shape = RoundedCornerShape(BudgetTheme.radii.lg),
@@ -945,66 +1239,9 @@ private fun InsightCategoryFilterRow(
 }
 
 @Composable
-private fun InsightHeroBadge(
-    label: String,
-    tint: Color,
-) {
-    Surface(
-        color = tint.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(BudgetTheme.radii.pill),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = tint,
-        )
-    }
-}
-
-@Composable
-private fun InsightProgressBar(
-    progress: Float,
-    accent: Color,
-) {
-    val animatedProgress = animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 500),
-        label = "insightProgress",
-    )
-
-    FractionProgressBar(
-        progress = animatedProgress.value,
-        fillColor = accent,
-        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-        barHeight = 10.dp,
-    )
-}
-
-@Composable
-private fun comparisonAccent(direction: ComparisonDirection): Color = when (direction) {
-    ComparisonDirection.Up -> BudgetTheme.extendedColors.danger
-    ComparisonDirection.Down -> BudgetTheme.extendedColors.success
-    ComparisonDirection.Flat -> MaterialTheme.colorScheme.primary
-}
-
-private fun buildSummaryLine(
-    scope: InsightScope,
-    comparison: String,
-    topCategory: CategoryTotalUi?,
-): String {
-    val categoryPart = topCategory?.label ?: "your categories"
-    return when {
-        comparison.isBlank() && scope == InsightScope.Month ->
-            "This month is still forming. Watch $categoryPart to see where spending starts to collect."
-
-        comparison.isBlank() ->
-            "This year is still forming. Watch $categoryPart to see where the most weight is building."
-
-        scope == InsightScope.Month ->
-            "$comparison versus the last month, with the strongest pull coming from $categoryPart."
-
-        else ->
-            "$comparison versus the last year, with the strongest pull coming from $categoryPart."
-    }
+private fun severityColor(severity: InsightSeverity): Color = when (severity) {
+    InsightSeverity.Positive -> BudgetTheme.extendedColors.success
+    InsightSeverity.Neutral -> MaterialTheme.colorScheme.primary
+    InsightSeverity.Warning -> Color(0xFFB27A00)
+    InsightSeverity.Danger -> MaterialTheme.colorScheme.error
 }
