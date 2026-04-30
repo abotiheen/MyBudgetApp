@@ -1,7 +1,6 @@
 package com.example.mybudgetapp.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -324,7 +323,7 @@ fun InsightsHeroCard(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = if (uiState.scope == InsightScope.Month) "Insights V2" else "Year insights",
+                        text = if (uiState.scope == InsightScope.Month) "Insights" else "Year insights",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
                     )
@@ -590,8 +589,7 @@ private fun TypedInsightCard(
     val accent = severityColor(insight.severity)
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 220)),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(BudgetTheme.radii.lg),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.14f)),
@@ -669,14 +667,19 @@ private fun TypedInsightCard(
                 TextButton(onClick = { expanded = !expanded }) {
                     Text(if (expanded) "Hide details" else "Why this?")
                 }
-                if (insight.action != null && insight.action != InsightAction.None) {
+
+                val isNavigationAction = insight.action is InsightAction.OpenCategory
+                val showActionButton = insight.action != null && 
+                    insight.action != InsightAction.None && 
+                    (isNavigationAction || !expanded)
+
+                if (showActionButton) {
                     TextButton(
                         onClick = {
-                            if (insight.action is InsightAction.OpenCategory) {
+                            if (isNavigationAction) {
                                 onAction(insight.action)
                             } else {
                                 expanded = true
-                                onAction(insight.action)
                             }
                         },
                     ) {
