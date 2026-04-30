@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,17 +20,28 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +59,7 @@ import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.CategoryTotalUi
 import com.example.mybudgetapp.ui.viewmodels.ComparisonDirection
 import com.example.mybudgetapp.ui.viewmodels.InsightScope
+import com.example.mybudgetapp.ui.viewmodels.InsightFilterCategoryUi
 import com.example.mybudgetapp.ui.viewmodels.InsightsUiState
 import com.example.mybudgetapp.ui.viewmodels.InsightsViewModel
 import com.example.mybudgetapp.ui.viewmodels.StatInsightUi
@@ -78,6 +92,7 @@ fun InsightsScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val viewModel: InsightsViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -94,10 +109,21 @@ fun InsightsScreen(
         BudgetBackdrop(modifier = Modifier.padding(paddingValues)) {
             InsightsBody(
                 uiState = uiState.value,
+                onOpenFilter = { showFilterSheet = true },
                 navigateToSpendingOnCategory = navigateToSpendingOnCategory,
                 navigateToCategories = navigateToCategories,
             )
         }
+    }
+
+    if (showFilterSheet) {
+        InsightsCategoryFilterBottomSheet(
+            categories = uiState.value.availableCategories,
+            onToggleCategory = viewModel::toggleCategory,
+            onSelectAll = viewModel::selectAllCategories,
+            onClearAll = viewModel::clearAllCategories,
+            onDismissRequest = { showFilterSheet = false },
+        )
     }
 }
 
@@ -105,6 +131,7 @@ fun InsightsScreen(
 private fun InsightsBody(
     modifier: Modifier = Modifier,
     uiState: InsightsUiState,
+    onOpenFilter: () -> Unit,
     navigateToSpendingOnCategory: (String) -> Unit,
     navigateToCategories: () -> Unit,
 ) {
@@ -142,37 +169,6 @@ private fun InsightsBody(
         }
         item {
             InsightSectionHeader(
-                title = "What matters",
-                subtitle = "The signals most people need before diving into transaction lists.",
-            )
-        }
-        item {
-            FocusSignalsRow(
-                biggestExpense = biggestExpense,
-                rateInsight = rateInsight,
-                rhythmInsight = rhythmInsight,
-            )
-        }
-        item {
-            TrendNarrativeCard(
-                scope = uiState.scope,
-                point = peakPoint,
-                comparison = uiState.comparison.summary,
-            )
-        }
-        item {
-            TrendChartCard(
-                title = if (uiState.scope == InsightScope.Month) "Daily pace" else "Monthly pace",
-                subtitle = if (uiState.scope == InsightScope.Month) {
-                    "See which days pushed spending hardest."
-                } else {
-                    "See which months carried the most weight."
-                },
-                points = uiState.trendPoints,
-            )
-        }
-        item {
-            InsightSectionHeader(
                 title = "Where It Went",
                 subtitle = "Category concentration matters more than raw counts when you want to adjust behavior.",
                 actionLabel = "Manage",
@@ -180,18 +176,62 @@ private fun InsightsBody(
             )
         }
         item {
-            CategoryFocusCard(
-                topCategory = topCategory,
-                topShare = topShare,
-                transactionInsight = transactionInsight,
+            InsightsFilterBar(
+                summary = uiState.selectedCategoriesSummary,
+                isFilterActive = uiState.isFilterActive,
+                onOpenFilter = onOpenFilter,
             )
         }
-        items(uiState.categoryTotals) { category ->
-            CategoryBreakdownRow(
-                category = category,
-                totalSpendingAmount = uiState.totalSpendingAmount,
-                onClick = { navigateToSpendingOnCategory(category.category) },
-            )
+        if (uiState.hasNoIncludedCategories) {
+            item {
+                NoCategoriesIncludedCard(onOpenFilter = onOpenFilter)
+            }
+        } else {
+            item {
+                InsightSectionHeader(
+                    title = "What matters",
+                    subtitle = "The signals most people need before diving into transaction lists.",
+                )
+            }
+            item {
+                FocusSignalsRow(
+                    biggestExpense = biggestExpense,
+                    rateInsight = rateInsight,
+                    rhythmInsight = rhythmInsight,
+                )
+            }
+            item {
+                TrendNarrativeCard(
+                    scope = uiState.scope,
+                    point = peakPoint,
+                    comparison = uiState.comparison.summary,
+                )
+            }
+            item {
+                TrendChartCard(
+                    title = if (uiState.scope == InsightScope.Month) "Daily pace" else "Monthly pace",
+                    subtitle = if (uiState.scope == InsightScope.Month) {
+                        "See which days pushed spending hardest."
+                    } else {
+                        "See which months carried the most weight."
+                    },
+                    points = uiState.trendPoints,
+                )
+            }
+            item {
+                CategoryFocusCard(
+                    topCategory = topCategory,
+                    topShare = topShare,
+                    transactionInsight = transactionInsight,
+                )
+            }
+            items(uiState.categoryTotals) { category ->
+                CategoryBreakdownRow(
+                    category = category,
+                    totalSpendingAmount = uiState.totalSpendingAmount,
+                    onClick = { navigateToSpendingOnCategory(category.category) },
+                )
+            }
         }
     }
 }
@@ -616,6 +656,102 @@ private fun CategoryBreakdownRow(
 }
 
 @Composable
+private fun InsightsFilterBar(
+    summary: String,
+    isFilterActive: Boolean,
+    onOpenFilter: () -> Unit,
+) {
+    Surface(
+        onClick = onOpenFilter,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        tonalElevation = BudgetTheme.elevations.level1,
+        shadowElevation = BudgetTheme.elevations.level1,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = BudgetTheme.spacing.lg, vertical = BudgetTheme.spacing.md),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(BudgetTheme.radii.md),
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "Included categories",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (isFilterActive) {
+                InsightHeroBadge(
+                    label = "Filtered",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoCategoriesIncludedCard(
+    onOpenFilter: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = BudgetTheme.elevations.level1),
+    ) {
+        Column(
+            modifier = Modifier.padding(BudgetTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            Text(
+                text = "No categories included",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Choose at least one category to restore insight totals, patterns, and breakdowns.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(
+                onClick = onOpenFilter,
+                shape = RoundedCornerShape(BudgetTheme.radii.lg),
+            ) {
+                Text("Choose categories")
+            }
+        }
+    }
+}
+
+@Composable
 private fun InsightSectionHeader(
     title: String,
     subtitle: String,
@@ -648,6 +784,161 @@ private fun InsightSectionHeader(
                 modifier = Modifier.clickable(onClick = onAction),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InsightsCategoryFilterBottomSheet(
+    categories: List<InsightFilterCategoryUi>,
+    onToggleCategory: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearAll: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = BudgetTheme.spacing.lg)
+                .padding(bottom = BudgetTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+        ) {
+            Text(
+                text = "Include categories",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "Only selected categories contribute to the insights on this screen.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.sm),
+            ) {
+                OutlinedButton(
+                    onClick = onSelectAll,
+                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                ) {
+                    Text("Select all")
+                }
+                OutlinedButton(
+                    onClick = onClearAll,
+                    shape = RoundedCornerShape(BudgetTheme.radii.lg),
+                ) {
+                    Text("Clear all")
+                }
+            }
+            if (categories.isEmpty()) {
+                Text(
+                    text = "No categories with spending are available in this period.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                categories.forEach { category ->
+                    InsightCategoryFilterRow(
+                        category = category,
+                        onClick = { onToggleCategory(category.categoryKey) },
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(BudgetTheme.spacing.sm))
+            Button(
+                onClick = onDismissRequest,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(BudgetTheme.radii.lg),
+            ) {
+                Text("Apply")
+            }
+        }
+    }
+}
+
+@Composable
+private fun InsightCategoryFilterRow(
+    category: InsightFilterCategoryUi,
+    onClick: () -> Unit,
+) {
+    val accent = categoryAccentColor(category.colorHex, category.categoryKey)
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(BudgetTheme.radii.lg),
+        tonalElevation = BudgetTheme.elevations.level1,
+        shadowElevation = BudgetTheme.elevations.level1,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = BudgetTheme.spacing.md, vertical = BudgetTheme.spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(BudgetTheme.spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                color = accent.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(BudgetTheme.radii.md),
+            ) {
+                Box(
+                    modifier = Modifier.size(42.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CategoryIcon(
+                        iconKey = category.iconKey,
+                        fallbackCategoryKey = category.categoryKey,
+                        tint = accent,
+                        size = 24.dp,
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = category.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = category.totalLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            FilterChip(
+                selected = category.isSelected,
+                onClick = onClick,
+                label = {
+                    Text(if (category.isSelected) "Included" else "Excluded")
+                },
+                leadingIcon = if (category.isSelected) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize),
+                        )
+                    }
+                } else {
+                    null
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = accent.copy(alpha = 0.18f),
+                    selectedLabelColor = accent,
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = category.isSelected,
+                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                    selectedBorderColor = accent.copy(alpha = 0.24f),
+                ),
             )
         }
     }

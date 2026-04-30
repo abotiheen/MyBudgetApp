@@ -88,6 +88,48 @@ class CategoriesViewModel(
         }
     }
 
+    fun editCategory(
+        target: BudgetCategory,
+        draft: CategoryDraft,
+        onResult: (CategorySaveResult) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val normalizedName = draft.name.trim()
+            if (normalizedName.isBlank()) {
+                onResult(CategorySaveResult.Invalid("Name is required."))
+                return@launch
+            }
+
+            val normalizedNameKey = normalizedName.lowercase()
+            if (allCategories.value.any {
+                    it.categoryKey != target.categoryKey &&
+                        !it.isArchived &&
+                        it.type == target.type &&
+                        it.name.trim().lowercase() == normalizedNameKey
+                }
+            ) {
+                onResult(CategorySaveResult.Invalid("Category name already exists."))
+                return@launch
+            }
+
+            itemRepository.updateCategory(
+                target.copy(
+                    name = normalizedName,
+                    iconKey = draft.iconKey.ifBlank { target.iconKey },
+                    colorHex = draft.colorHex.ifBlank { target.colorHex },
+                )
+            )
+            onResult(CategorySaveResult.Saved)
+        }
+    }
+
+    fun restoreCategory(category: BudgetCategory, onResult: (CategoryActionResult) -> Unit) {
+        viewModelScope.launch {
+            itemRepository.updateCategory(category.copy(isArchived = false))
+            onResult(CategoryActionResult.Success("Category restored"))
+        }
+    }
+
     private fun uniqueCategoryKey(name: String, usedKeys: Set<String>): String {
         val baseKey = name
             .lowercase()
