@@ -33,15 +33,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mybudgetapp.R
-import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
 import com.example.mybudgetapp.ui.navigation.NavigationDestination
+import com.example.mybudgetapp.ui.shared.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.AppViewModelProvider
 import com.example.mybudgetapp.ui.viewmodels.CategoryTotalUi
@@ -51,13 +50,11 @@ import com.example.mybudgetapp.ui.viewmodels.InsightsUiState
 import com.example.mybudgetapp.ui.viewmodels.InsightsViewModel
 import com.example.mybudgetapp.ui.viewmodels.StatInsightUi
 import com.example.mybudgetapp.ui.viewmodels.TrendPointUi
-import com.example.mybudgetapp.ui.viewmodels.categoryLabel
 import com.example.mybudgetapp.ui.widgets.BudgetBackdrop
 import com.example.mybudgetapp.ui.widgets.BudgetTopAppBar
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.CategoryIcon
-import com.example.mybudgetapp.ui.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.widgets.TrendChartCard
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 

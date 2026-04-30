@@ -31,14 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.mybudgetapp.ui.shared.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.HomeTransactionPreview
 import com.example.mybudgetapp.ui.widgets.BudgetValueText
 import com.example.mybudgetapp.ui.widgets.BudgetValueTone
 import com.example.mybudgetapp.ui.widgets.CategoryIcon
-import com.example.mybudgetapp.ui.widgets.FractionProgressBar
 import com.example.mybudgetapp.ui.widgets.categoryAccentColor
 
 data class DashboardQuickStat(
