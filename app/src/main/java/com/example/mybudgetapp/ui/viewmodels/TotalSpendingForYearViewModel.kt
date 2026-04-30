@@ -4,9 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
-import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.ui.screens.TotalIncomeDestinationForYear
+import com.example.mybudgetapp.ui.shared.models.DetailGroupGranularity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,19 +40,27 @@ class TotalSpendingScreenForYearViewModel(
         itemRepository.getAllCategories(includeArchived = true),
     ) { spendingItems, totalSpending, totalIncome, incomeItems, categories ->
         val categoryLookup = categories.associateBy { it.categoryKey }
+        val spendingGroupResult = spendingItems.toGroupedSpendingItemSections(
+            year = currentYear,
+            month = 0,
+            categoryLookup = categoryLookup,
+            granularity = DetailGroupGranularity.MONTH,
+            totalLabel = "Spending",
+        )
+        val incomeGroupResult = incomeItems.toGroupedSpendingItemSections(
+            year = currentYear,
+            month = 0,
+            categoryLookup = categoryLookup,
+            granularity = DetailGroupGranularity.MONTH,
+            totalLabel = "Income",
+        )
         YearSpendingContent(
             totalSpending = formatCompactCurrencyIraqiDinar(totalSpending),
-            spendingItemList = spendingItems.toGroupedSpendingItems(
-                year = currentYear,
-                month = 0,
-                categoryLookup = categoryLookup,
-            ),
+            spendingItemList = spendingGroupResult.items,
+            spendingGroups = spendingGroupResult.groups,
             totalIncome = formatCompactCurrencyIraqiDinar(totalIncome),
-            incomeItemList = incomeItems.toGroupedSpendingItems(
-                year = currentYear,
-                month = 0,
-                categoryLookup = categoryLookup,
-            ),
+            incomeItemList = incomeGroupResult.items,
+            incomeGroups = incomeGroupResult.groups,
         )
     }
 
@@ -72,6 +80,8 @@ class TotalSpendingScreenForYearViewModel(
             isIncome = isIncome,
             totalIncome = content.totalIncome,
             incomeItemList = content.incomeItemList,
+            spendingGroups = content.spendingGroups,
+            incomeGroups = content.incomeGroups,
             isThisMonthCurrent = isThisYearCurrent,
             isDeleteDialogVisible = isDeleteDialogVisible
         )
@@ -105,4 +115,6 @@ private data class YearSpendingContent(
     val totalIncome: String,
     val spendingItemList: List<SpendingItem>,
     val incomeItemList: List<SpendingItem>,
+    val spendingGroups: List<com.example.mybudgetapp.ui.shared.models.DetailGroupUi<SpendingItem>>,
+    val incomeGroups: List<com.example.mybudgetapp.ui.shared.models.DetailGroupUi<SpendingItem>>,
 )

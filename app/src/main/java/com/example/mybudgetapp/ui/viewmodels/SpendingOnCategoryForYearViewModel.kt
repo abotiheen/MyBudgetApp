@@ -5,9 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
-import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryForYearDestination
+import com.example.mybudgetapp.ui.shared.models.DetailGroupGranularity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,10 +42,13 @@ class SpendingOnCategoryForYearScreenViewModel(
         ),
         itemRepository.getCategory(category),
     ) { itemList, totalCategory, totalSpending, categoryDetails ->
-        val mappedItems = itemList.toGroupedSpendingOnCategoryItems(
+        val groupResult = itemList.toGroupedSpendingOnCategorySections(
             year = currentYear,
             month = 0,
+            granularity = DetailGroupGranularity.MONTH,
+            totalLabel = "Spending",
         )
+        val mappedItems = groupResult.items
         val averageAmount = if (mappedItems.isEmpty()) 0.0 else totalCategory / mappedItems.size
         val biggestAmount = itemList.maxOfOrNull { it.amount } ?: 0.0
         SpendingOnCategoryUiState(
@@ -63,6 +66,7 @@ class SpendingOnCategoryForYearScreenViewModel(
             isDeleteDialogVisible = isDeleteDialogVisible.value,
             categoryIconKey = categoryDetails?.iconKey.orEmpty(),
             categoryColorHex = categoryDetails?.colorHex.orEmpty(),
+            groups = groupResult.groups,
         )
     }.stateIn(
         scope = viewModelScope,

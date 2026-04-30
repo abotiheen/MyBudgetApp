@@ -1,7 +1,9 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -52,7 +54,8 @@ fun SpendingOnCategoryScreen(
     navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val viewModel: SpendingOnCategoryScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val viewModel: SpendingOnCategoryScreenViewModel =
+        viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -73,7 +76,11 @@ fun SpendingOnCategoryScreen(
                     if (uiState.value.isThisMonthCurrent) {
                         navigateToAddItem(uiState.value.sentCategory)
                     } else {
-                        Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            R.string.you_cant_add_item_archived,
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 },
                 shape = CircleShape,
@@ -99,6 +106,7 @@ fun SpendingOnCategoryScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SpendingOnCategoryBody(
     modifier: Modifier = Modifier,
@@ -113,71 +121,90 @@ fun SpendingOnCategoryBody(
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
-            start = spacing.lg,
-            end = spacing.lg,
             top = spacing.lg,
             bottom = 40.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         item {
-            DetailCollectionHero(
-                title = categoryLabel,
-                periodLabel = uiState.periodLabel,
-                totalValue = uiState.totalCategory,
-                subtitle = "Spending concentrated in ${categoryLabel.lowercase()} for this month.",
-                badgeLabel = "${(uiState.spendingRatio * 100).toInt()}% share",
-                accent = accent,
-                iconKey = uiState.categoryIconKey,
-                fallbackCategoryKey = uiState.sentCategory,
-                chips = listOf(
-                    DetailHeroChipUi("Entries", uiState.transactionCount.toString()),
-                    DetailHeroChipUi("Average", uiState.averageTransaction, isMonetary = true),
-                    DetailHeroChipUi("Largest", uiState.biggestTransaction, isMonetary = true),
-                ),
-            )
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                DetailCollectionHero(
+                    title = categoryLabel,
+                    periodLabel = uiState.periodLabel,
+                    totalValue = uiState.totalCategory,
+                    subtitle = "Spending concentrated in ${categoryLabel.lowercase()} for this month.",
+                    badgeLabel = "${(uiState.spendingRatio * 100).toInt()}% share",
+                    accent = accent,
+                    iconKey = uiState.categoryIconKey,
+                    fallbackCategoryKey = uiState.sentCategory,
+                    chips = listOf(
+                        DetailHeroChipUi("Entries", uiState.transactionCount.toString()),
+                        DetailHeroChipUi("Average", uiState.averageTransaction, isMonetary = true),
+                        DetailHeroChipUi("Largest", uiState.biggestTransaction, isMonetary = true),
+                    ),
+                )
+            }
         }
         item {
-            DetailListHeader(
-                title = "$categoryLabel entries",
-                subtitle = if (uiState.itemList.isEmpty()) {
-                    "Nothing recorded here yet."
-                } else {
-                    "${uiState.totalSpending} overall this month. Tap any row to inspect it."
-                },
-            )
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                DetailListHeader(
+                    title = "$categoryLabel entries",
+                    subtitle = if (uiState.itemList.isEmpty()) {
+                        "Nothing recorded here yet."
+                    } else {
+                        "${uiState.totalSpending} overall this month. Tap any row to inspect it."
+                    },
+                )
+            }
         }
         if (uiState.itemList.isEmpty()) {
             item {
-                DetailEmptyStateCard(
-                    title = "No ${categoryLabel.lowercase()} entries yet",
-                    message = "When entries land here, this view becomes much easier to review.",
-                    accent = accent,
-                    iconKey = uiState.categoryIconKey,
-                    fallbackCategoryKey = uiState.sentCategory,
-                )
+                Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                    DetailEmptyStateCard(
+                        title = "No ${categoryLabel.lowercase()} entries yet",
+                        message = "When entries land here, this view becomes much easier to review.",
+                        accent = accent,
+                        iconKey = uiState.categoryIconKey,
+                        fallbackCategoryKey = uiState.sentCategory,
+                    )
+                }
             }
         } else {
-            items(uiState.itemList) { item ->
-                DetailEntryRow(
-                    title = item.name,
-                    amount = item.totalCost,
-                    meta = "$categoryLabel • ${item.date}",
-                    imagePath = item.imagePath,
-                    iconKey = uiState.categoryIconKey,
-                    fallbackCategoryKey = uiState.sentCategory,
-                    accent = accent,
-                    onOpen = {
-                        navigateToItemDates(
-                            item.name,
-                            item.category,
-                            item.type,
-                            item.year,
-                            item.month,
+            uiState.groups.forEach { group ->
+                stickyHeader(key = "detail-group-${group.key}") {
+                    DetailGroupSummaryCard(
+                        title = group.label,
+                        displayTotal = group.displayTotal,
+                        totalLabel = group.totalLabel,
+                        accent = accent,
+                    )
+                }
+                items(
+                    items = group.items,
+                    key = { item -> "${group.key}-${item.itemId}" },
+                ) { item ->
+                    Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                        DetailEntryRow(
+                            title = item.name,
+                            amount = item.totalCost,
+                            meta = "$categoryLabel • ${item.date}",
+                            imagePath = item.imagePath,
+                            iconKey = uiState.categoryIconKey,
+                            fallbackCategoryKey = uiState.sentCategory,
+                            accent = accent,
+                            onOpen = {
+                                navigateToItemDates(
+                                    item.name,
+                                    item.category,
+                                    item.type,
+                                    item.year,
+                                    item.month,
+                                )
+                            },
+                            onDelete = { deleteItem(item.itemId) },
                         )
-                    },
-                    onDelete = { deleteItem(item.itemId) },
-                )
+                    }
+                }
             }
         }
     }

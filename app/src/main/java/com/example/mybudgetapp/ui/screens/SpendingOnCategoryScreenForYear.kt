@@ -1,6 +1,7 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,7 +71,8 @@ fun SpendingOnCategoryScreenForYear(
     navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val viewModel: SpendingOnCategoryForYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val viewModel: SpendingOnCategoryForYearScreenViewModel =
+        viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val categoryLabel = uiState.value.category
@@ -92,7 +94,11 @@ fun SpendingOnCategoryScreenForYear(
                     if (uiState.value.isThisMonthCurrent) {
                         navigateToAddItem(uiState.value.sentCategory)
                     } else {
-                        Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            R.string.you_cant_add_item_archived,
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 },
                 shape = CircleShape,
@@ -118,6 +124,7 @@ fun SpendingOnCategoryScreenForYear(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SpendingOnCategoryYearBody(
     modifier: Modifier = Modifier,
@@ -132,85 +139,108 @@ private fun SpendingOnCategoryYearBody(
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
-            start = spacing.lg,
-            end = spacing.lg,
             top = spacing.lg,
             bottom = 40.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(spacing.lg),
     ) {
         item {
-            YearCategorySnapshotCard(
-                category = categoryLabel,
-                yearLabel = uiState.periodLabel,
-                totalCategory = uiState.totalCategory,
-                totalSpending = uiState.totalSpending,
-                spendingRatio = uiState.spendingRatio,
-                iconKey = uiState.categoryIconKey,
-                fallbackCategoryKey = uiState.sentCategory,
-                accent = accent,
-            )
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            ) {
-                YearCategoryStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Entries",
-                    value = uiState.transactionCount.toString(),
-                    subtitle = "Recorded this year",
-                )
-                YearCategoryStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Average",
-                    value = uiState.averageTransaction,
-                    subtitle = "Typical ticket size",
-                )
-            }
-        }
-        item {
-            YearCategoryStatCard(
-                label = "Largest transaction",
-                value = uiState.biggestTransaction,
-                subtitle = "Highest single spend this year",
-            )
-        }
-        item {
-            SectionHeading(
-                title = "$categoryLabel feed",
-                subtitle = "The recorded entries behind this annual total.",
-            )
-        }
-        if (uiState.itemList.isEmpty()) {
-            item {
-                YearEmptyCategoryFeedCard(
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                YearCategorySnapshotCard(
                     category = categoryLabel,
+                    yearLabel = uiState.periodLabel,
+                    totalCategory = uiState.totalCategory,
+                    totalSpending = uiState.totalSpending,
+                    spendingRatio = uiState.spendingRatio,
+                    iconKey = uiState.categoryIconKey,
+                    fallbackCategoryKey = uiState.sentCategory,
                     accent = accent,
                 )
             }
-        } else {
-            items(uiState.itemList) { item ->
-                ItemCard(
-                    title = item.name,
-                    totalSpending = item.totalCost,
-                    deleteItem = { deleteItem(item.itemId) },
-                    date = item.date,
-                    imagePath = item.imagePath,
-                    accentColor = accent,
-                    navigateToItemDates = {
-                        navigateToItemDates(
-                            item.name,
-                            item.category,
-                            item.type,
-                            item.year,
-                            item.month,
-                        )
-                    },
-                    iconKey = uiState.categoryIconKey,
-                    fallbackCategoryKey = uiState.sentCategory,
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                ) {
+                    YearCategoryStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = "Entries",
+                        value = uiState.transactionCount.toString(),
+                        subtitle = "Recorded this year",
+                    )
+                    YearCategoryStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = "Average",
+                        value = uiState.averageTransaction,
+                        subtitle = "Typical ticket size",
+                    )
+                }
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                YearCategoryStatCard(
+                    label = "Largest transaction",
+                    value = uiState.biggestTransaction,
+                    subtitle = "Highest single spend this year",
                 )
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                SectionHeading(
+                    title = "$categoryLabel feed",
+                    subtitle = "The recorded entries behind this annual total.",
+                )
+            }
+        }
+        if (uiState.itemList.isEmpty()) {
+            item {
+                Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                    YearEmptyCategoryFeedCard(
+                        category = categoryLabel,
+                        accent = accent,
+                    )
+                }
+            }
+        } else {
+            uiState.groups.forEach { group ->
+                stickyHeader(key = "detail-group-${group.key}") {
+                    DetailGroupSummaryCard(
+                        title = group.label,
+                        displayTotal = group.displayTotal,
+                        totalLabel = group.totalLabel,
+                        accent = accent,
+                    )
+                }
+                items(
+                    items = group.items,
+                    key = { item -> "${group.key}-${item.itemId}" },
+                ) { item ->
+                    Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                        ItemCard(
+                            title = item.name,
+                            totalSpending = item.totalCost,
+                            deleteItem = { deleteItem(item.itemId) },
+                            date = item.date,
+                            imagePath = item.imagePath,
+                            accentColor = accent,
+                            navigateToItemDates = {
+                                navigateToItemDates(
+                                    item.name,
+                                    item.category,
+                                    item.type,
+                                    item.year,
+                                    item.month,
+                                )
+                            },
+                            iconKey = uiState.categoryIconKey,
+                            fallbackCategoryKey = uiState.sentCategory,
+                        )
+                    }
+                }
             }
         }
     }
@@ -320,7 +350,10 @@ private fun YearCategorySnapshotCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = BudgetTheme.spacing.md, vertical = BudgetTheme.spacing.md),
+                            .padding(
+                                horizontal = BudgetTheme.spacing.md,
+                                vertical = BudgetTheme.spacing.md
+                            ),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

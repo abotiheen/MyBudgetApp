@@ -1,8 +1,8 @@
 package com.example.mybudgetapp.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,7 +71,8 @@ fun TotalIncomeScreenForYear(
     navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val viewModel: TotalSpendingScreenForYearViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val viewModel: TotalSpendingScreenForYearViewModel =
+        viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -92,7 +93,11 @@ fun TotalIncomeScreenForYear(
                     if (uiState.value.isThisMonthCurrent) {
                         navigateToAddItem(if (uiState.value.isIncome) "income" else "all")
                     } else {
-                        Toast.makeText(context, R.string.you_cant_add_item_archived, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            R.string.you_cant_add_item_archived,
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 },
                 shape = CircleShape,
@@ -119,6 +124,7 @@ fun TotalIncomeScreenForYear(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TotalIncomeYearBody(
     modifier: Modifier = Modifier,
@@ -129,6 +135,7 @@ private fun TotalIncomeYearBody(
 ) {
     val spacing = BudgetTheme.spacing
     val items = if (uiState.isIncome) uiState.incomeItemList else uiState.spendingItemList
+    val groups = if (uiState.isIncome) uiState.incomeGroups else uiState.spendingGroups
     val accent = if (uiState.isIncome) {
         BudgetTheme.extendedColors.income
     } else {
@@ -140,87 +147,110 @@ private fun TotalIncomeYearBody(
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
-            start = spacing.lg,
-            end = spacing.lg,
             top = spacing.lg,
             bottom = 40.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(spacing.lg),
     ) {
         item {
-            YearTransactionTypeSwitch(
-                isIncome = uiState.isIncome,
-                onToggleType = onToggleType,
-            )
-        }
-        item {
-            YearTransactionSummaryCard(
-                isIncome = uiState.isIncome,
-                yearLabel = uiState.month,
-                totalValue = totalValue,
-                itemCount = items.size,
-                isCurrentPeriod = uiState.isThisMonthCurrent,
-                accent = accent,
-            )
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            ) {
-                YearTransactionStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Entries",
-                    value = items.size.toString(),
-                    subtitle = if (uiState.isIncome) "Income records" else "Expense records",
-                )
-                YearTransactionStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Largest",
-                    value = largestTransaction,
-                    subtitle = if (uiState.isIncome) "Biggest income" else "Biggest expense",
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                YearTransactionTypeSwitch(
+                    isIncome = uiState.isIncome,
+                    onToggleType = onToggleType,
                 )
             }
         }
         item {
-            SectionHeading(
-                title = if (uiState.isIncome) "Income feed" else "Expense feed",
-                subtitle = "The transactions that shaped ${uiState.month}.",
-            )
-        }
-        if (items.isEmpty()) {
-            item {
-                YearEmptyTransactionCard(
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                YearTransactionSummaryCard(
                     isIncome = uiState.isIncome,
+                    yearLabel = uiState.month,
+                    totalValue = totalValue,
+                    itemCount = items.size,
+                    isCurrentPeriod = uiState.isThisMonthCurrent,
                     accent = accent,
                 )
             }
-        } else {
-            items(items) { item ->
-                val itemAccent = if (uiState.isIncome) {
-                    BudgetTheme.extendedColors.income
-                } else {
-                    categoryAccentColor(item.categoryColorHex, item.category)
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                ) {
+                    YearTransactionStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = "Entries",
+                        value = items.size.toString(),
+                        subtitle = if (uiState.isIncome) "Income records" else "Expense records",
+                    )
+                    YearTransactionStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = "Largest",
+                        value = largestTransaction,
+                        subtitle = if (uiState.isIncome) "Biggest income" else "Biggest expense",
+                    )
                 }
-                ItemCard(
-                    title = item.name,
-                    totalSpending = item.totalCost,
-                    deleteItem = { deleteItem(item.itemId) },
-                    date = item.date,
-                    imagePath = item.imagePath,
-                    accentColor = itemAccent,
-                    navigateToItemDates = {
-                        navigateToItemDates(
-                            item.name,
-                            item.category,
-                            item.type,
-                            item.year,
-                            item.month,
-                        )
-                    },
-                    iconKey = item.categoryIconKey,
-                    fallbackCategoryKey = item.category,
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                SectionHeading(
+                    title = if (uiState.isIncome) "Income feed" else "Expense feed",
+                    subtitle = "The transactions that shaped ${uiState.month}.",
                 )
+            }
+        }
+        if (items.isEmpty()) {
+            item {
+                Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                    YearEmptyTransactionCard(
+                        isIncome = uiState.isIncome,
+                        accent = accent,
+                    )
+                }
+            }
+        } else {
+            groups.forEach { group ->
+                stickyHeader(key = "detail-group-${group.key}") {
+                    DetailGroupSummaryCard(
+                        title = group.label,
+                        displayTotal = group.displayTotal,
+                        totalLabel = group.totalLabel,
+                        accent = accent,
+                    )
+                }
+                items(
+                    items = group.items,
+                    key = { item -> "${group.key}-${item.itemId}" },
+                ) { item ->
+                    val itemAccent = if (uiState.isIncome) {
+                        BudgetTheme.extendedColors.income
+                    } else {
+                        categoryAccentColor(item.categoryColorHex, item.category)
+                    }
+                    Box(modifier = Modifier.padding(horizontal = spacing.lg)) {
+                        ItemCard(
+                            title = item.name,
+                            totalSpending = item.totalCost,
+                            deleteItem = { deleteItem(item.itemId) },
+                            date = item.date,
+                            imagePath = item.imagePath,
+                            accentColor = itemAccent,
+                            navigateToItemDates = {
+                                navigateToItemDates(
+                                    item.name,
+                                    item.category,
+                                    item.type,
+                                    item.year,
+                                    item.month,
+                                )
+                            },
+                            iconKey = item.categoryIconKey,
+                            fallbackCategoryKey = item.category,
+                        )
+                    }
+                }
             }
         }
     }
@@ -335,7 +365,10 @@ private fun YearTransactionSummaryCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = BudgetTheme.spacing.md, vertical = BudgetTheme.spacing.md),
+                            .padding(
+                                horizontal = BudgetTheme.spacing.md,
+                                vertical = BudgetTheme.spacing.md
+                            ),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

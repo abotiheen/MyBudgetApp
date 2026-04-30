@@ -7,13 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
-import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
 import com.example.mybudgetapp.database.normalizedTransactionTitleKey
 import com.example.mybudgetapp.database.resolvedTransactionTitle
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
+import com.example.mybudgetapp.ui.shared.models.DetailGroupGranularity
+import com.example.mybudgetapp.ui.shared.models.DetailGroupUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Month
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class SpendingOnCategoryScreenViewModel(
     private val itemRepository: ItemRepository,
@@ -47,10 +50,13 @@ class SpendingOnCategoryScreenViewModel(
         ),
         itemRepository.getCategory(category),
     ) { itemList, totalCategory, totalSpending, categoryDetails ->
-        val mappedItems = itemList.toGroupedSpendingOnCategoryItems(
+        val groupResult = itemList.toGroupedSpendingOnCategorySections(
             year = currentYear,
             month = currentMonthValue,
+            granularity = DetailGroupGranularity.DAY,
+            totalLabel = "Spending",
         )
+        val mappedItems = groupResult.items
         val averageAmount = if (mappedItems.isEmpty()) 0.0 else totalCategory / mappedItems.size
         val biggestAmount = itemList.maxOfOrNull { it.amount } ?: 0.0
         SpendingOnCategoryUiState(
@@ -68,6 +74,7 @@ class SpendingOnCategoryScreenViewModel(
             isDeleteDialogVisible = isDeleteDialogVisible.value,
             categoryIconKey = categoryDetails?.iconKey.orEmpty(),
             categoryColorHex = categoryDetails?.colorHex.orEmpty(),
+            groups = groupResult.groups,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -106,6 +113,7 @@ data class SpendingOnCategoryUiState(
     val itemList: List<SpendingOnCategoryItem> = listOf(),
     val categoryIconKey: String = "",
     val categoryColorHex: String = "",
+    val groups: List<DetailGroupUi<SpendingOnCategoryItem>> = listOf(),
 )
 
 data class SpendingOnCategoryItem(
@@ -120,6 +128,76 @@ data class SpendingOnCategoryItem(
     val year: Int = 0,
     val month: Int = 0,
 )
+
+data class SpendingOnCategoryGroupResult(
+    val items: List<SpendingOnCategoryItem>,
+    val groups: List<DetailGroupUi<SpendingOnCategoryItem>>,
+)
+
+private data class SpendingOnCategoryBucketGroupKey(
+    val bucketDate: LocalDate,
+    val title: String,
+    val category: String,
+    val type: String,
+)
+
+fun List<BudgetTransaction>.toGroupedSpendingOnCategorySections(
+    year: Int,
+    month: Int,
+    granularity: DetailGroupGranularity,
+    totalLabel: String,
+): SpendingOnCategoryGroupResult {
+    val groupedItems = this
+        .groupBy { transaction ->
+            val transactionDate = parseCategoryTransactionDate(transaction.transactionDate)
+            SpendingOnCategoryBucketGroupKey(
+                bucketDate = categoryBucketDateFor(transactionDate, granularity),
+                title = normalizedTransactionTitleKey(transaction.title, transaction.category, transaction.type),
+                category = transaction.category,
+                type = transaction.type,
+            )
+        }
+        .values
+        .map { transactions ->
+            val latestTransaction = transactions.maxWithOrNull(
+                compareBy<BudgetTransaction> { it.transactionDate }.thenBy { it.transactionId }
+            ) ?: transactions.first()
+            SpendingOnCategoryItem(
+                itemId = latestTransaction.transactionId,
+                imagePath = usableImagePath(
+                    latestTransaction.picturePath ?: transactions.firstNotNullOfOrNull { it.picturePath }
+                ),
+                name = resolvedTransactionTitle(latestTransaction.title, latestTransaction.category, latestTransaction.type),
+                date = latestTransaction.transactionDate,
+                totalCost = formatCompactCurrencyIraqiDinar(transactions.sumOf { it.amount }),
+                amountValue = transactions.sumOf { it.amount },
+                category = latestTransaction.category,
+                type = latestTransaction.type,
+                year = year,
+                month = month,
+            )
+        }
+        .sortedWith(compareByDescending<SpendingOnCategoryItem> { it.date }.thenByDescending { it.itemId })
+
+    val groups = groupedItems
+        .groupBy { categoryBucketDateFor(parseCategoryTransactionDate(it.date), granularity) }
+        .toList()
+        .sortedByDescending { (bucketDate, _) -> bucketDate }
+        .map { (bucketDate, items) ->
+            DetailGroupUi(
+                key = "${granularity.name.lowercase(Locale.ROOT)}-$bucketDate",
+                label = bucketDate.toCategoryGroupLabel(granularity),
+                displayTotal = formatCompactCurrencyIraqiDinar(items.sumOf { it.amountValue }),
+                totalLabel = totalLabel,
+                items = items.sortedWith(compareByDescending<SpendingOnCategoryItem> { it.date }.thenByDescending { it.itemId }),
+            )
+        }
+
+    return SpendingOnCategoryGroupResult(
+        items = groupedItems,
+        groups = groups,
+    )
+}
 
 fun List<BudgetTransaction>.toGroupedSpendingOnCategoryItems(
     year: Int,
@@ -149,3 +227,25 @@ fun List<BudgetTransaction>.toGroupedSpendingOnCategoryItems(
         )
     }
     .sortedWith(compareByDescending<SpendingOnCategoryItem> { it.date }.thenByDescending { it.itemId })
+
+private fun parseCategoryTransactionDate(value: String): LocalDate =
+    LocalDate.parse(value)
+
+private fun categoryBucketDateFor(
+    transactionDate: LocalDate,
+    granularity: DetailGroupGranularity,
+): LocalDate = when (granularity) {
+    DetailGroupGranularity.DAY -> transactionDate
+    DetailGroupGranularity.MONTH -> transactionDate.withDayOfMonth(1)
+}
+
+private fun LocalDate.toCategoryGroupLabel(granularity: DetailGroupGranularity): String = when (granularity) {
+    DetailGroupGranularity.DAY -> format(CATEGORY_DAY_GROUP_FORMATTER)
+    DetailGroupGranularity.MONTH -> format(CATEGORY_MONTH_GROUP_FORMATTER)
+}
+
+private val CATEGORY_DAY_GROUP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+
+private val CATEGORY_MONTH_GROUP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
