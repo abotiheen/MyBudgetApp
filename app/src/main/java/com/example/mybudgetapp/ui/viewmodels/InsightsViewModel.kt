@@ -96,7 +96,7 @@ class InsightsViewModel(
                 scope = InsightScope.Month,
                 trendTitle = "Daily spending trend",
                 trendSubtitle = "See which days pushed spending up",
-                trendPoints = buildMonthTrendPoints(yearMonth.lengthOfMonth(), dayMap),
+                trendPoints = buildMonthTrendPoints(yearMonth, dayMap),
                 comparison = buildMonthlyComparison(totals.totalSpending, totals.previousMonthTotal, yearMonth),
                 overviewInsights = monthInsights(transactions, totals.totalSpending, year, selectedMonth, totals.categoryNames).take(3),
                 habitInsights = monthInsights(transactions, totals.totalSpending, year, selectedMonth, totals.categoryNames).drop(2),

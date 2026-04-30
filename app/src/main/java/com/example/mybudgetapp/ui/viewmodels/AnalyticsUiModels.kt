@@ -3,10 +3,11 @@ package com.example.mybudgetapp.ui.viewmodels
 import androidx.compose.ui.graphics.Color
 import com.example.mybudgetapp.data.capitalized
 import com.example.mybudgetapp.data.formatCompactCurrencyIraqiDinar
-import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.CategorySpendingTotal
 import java.time.Month
+import java.time.format.TextStyle
+import java.util.Locale
 import java.time.YearMonth
 import kotlin.math.abs
 
@@ -19,6 +20,7 @@ enum class ComparisonDirection {
 data class TrendPointUi(
     val label: String,
     val value: Double,
+    val detailLabel: String = label,
 )
 
 data class ComparisonInsightUi(
@@ -64,15 +66,27 @@ fun List<CategorySpendingTotal>.toCategorySummaryUi(): List<CategorySummaryUi> =
 fun List<CategorySummaryUi>.amountFor(categoryKey: String): Double =
     firstOrNull { it.categoryKey == categoryKey }?.total ?: 0.0
 
-fun buildMonthTrendPoints(daysInMonth: Int, values: Map<Int, Double>): List<TrendPointUi> {
+fun buildMonthTrendPoints(yearMonth: YearMonth, values: Map<Int, Double>): List<TrendPointUi> {
+    val daysInMonth = yearMonth.lengthOfMonth()
     return (1..daysInMonth).map { day ->
-        TrendPointUi(label = day.toString(), value = values[day] ?: 0.0)
+        val date = yearMonth.atDay(day)
+        val weekday = date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+        TrendPointUi(
+            label = day.toString(),
+            value = values[day] ?: 0.0,
+            detailLabel = "${weekday.capitalized()} $day",
+        )
     }
 }
 
 fun buildYearTrendPoints(values: Map<Int, Double>): List<TrendPointUi> {
     return (1..12).map { month ->
-        TrendPointUi(label = Month.of(month).name.take(3).capitalized(), value = values[month] ?: 0.0)
+        val monthLabel = Month.of(month).name.take(3).capitalized()
+        TrendPointUi(
+            label = monthLabel,
+            value = values[month] ?: 0.0,
+            detailLabel = monthLabel,
+        )
     }
 }
 

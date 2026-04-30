@@ -107,7 +107,7 @@ class ThisMonthScreenViewModel(
                 canNavigatePrevious = selectedIndex > 0,
                 canNavigateNext = selectedIndex in 0 until periods.lastIndex,
                 isCurrentPeriod = period.year == today.year && period.month == today.monthValue,
-                spendingTrend = buildMonthTrendPoints(yearMonth.lengthOfMonth(), dayMap),
+                spendingTrend = buildMonthTrendPoints(yearMonth, dayMap),
                 comparison = buildMonthlyComparison(totals.totalSpending, previousTotal, yearMonth),
                 insights = monthInsights(
                     transactions,

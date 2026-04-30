@@ -1,10 +1,24 @@
 package com.example.mybudgetapp.ui.widgets
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,10 +37,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.ui.theme.BudgetTheme
 import com.example.mybudgetapp.ui.viewmodels.ComparisonDirection
 import com.example.mybudgetapp.ui.viewmodels.ComparisonInsightUi
@@ -45,6 +67,8 @@ fun TrendChartCard(
     modifier: Modifier = Modifier,
 ) {
     val maxValue = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1.0
+    var selectedPointIndex by remember(points) { mutableIntStateOf(-1) }
+    val selectedPoint = points.getOrNull(selectedPointIndex)
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(30.dp),
@@ -62,6 +86,24 @@ fun TrendChartCard(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             SectionHeading(title = title, subtitle = subtitle)
+            AnimatedVisibility(
+                visible = selectedPoint != null,
+                enter = fadeIn(animationSpec = tween(durationMillis = 220)) +
+                    expandVertically(
+                        animationSpec = tween(durationMillis = 280),
+                        expandFrom = Alignment.Top,
+                    ),
+                exit = fadeOut(animationSpec = tween(durationMillis = 140)) +
+                    shrinkVertically(
+                        animationSpec = tween(durationMillis = 220),
+                        shrinkTowards = Alignment.Top,
+                    ),
+                label = "selectedTrendPointVisibility",
+            ) {
+                selectedPoint?.let { point ->
+                    SelectedTrendPointSummary(point = point)
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -69,13 +111,14 @@ fun TrendChartCard(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                points.forEach { point ->
+                points.forEachIndexed { index, point ->
                     val heightFraction = (point.value / maxValue).toFloat().coerceIn(0f, 1f)
                     val animatedHeightFraction = animateFloatAsState(
                         targetValue = heightFraction,
                         animationSpec = tween(durationMillis = 650),
                         label = "trendBarHeight",
                     )
+                    val isSelected = selectedPointIndex == index
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -83,7 +126,25 @@ fun TrendChartCard(
                         Box(
                             modifier = Modifier
                                 .width(18.dp)
-                                .height(148.dp),
+                                .height(148.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    role = Role.Button,
+                                    onClickLabel = "Show spending for ${point.detailLabel}",
+                                ) { selectedPointIndex = index }
+                                .semantics {
+                                    selected = isSelected
+                                    contentDescription = buildString {
+                                        append(point.detailLabel)
+                                        append(", ")
+                                        append(formatCurrencyIraqiDinar(point.value))
+                                        append(" IQD")
+                                        if (isSelected) {
+                                            append(", selected")
+                                        }
+                                    }
+                                },
                             contentAlignment = Alignment.BottomCenter,
                         ) {
                             Box(
@@ -91,7 +152,20 @@ fun TrendChartCard(
                                     .fillMaxWidth()
                                     .height(148.dp)
                                     .background(
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
+                                        },
+                                        shape = RoundedCornerShape(18.dp),
+                                    )
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                                        } else {
+                                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)
+                                        },
                                         shape = RoundedCornerShape(18.dp),
                                     )
                             )
@@ -105,7 +179,11 @@ fun TrendChartCard(
                                             .dp
                                     )
                                     .background(
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)
+                                        },
                                         shape = RoundedCornerShape(18.dp),
                                     )
                             )
@@ -113,10 +191,71 @@ fun TrendChartCard(
                         Text(
                             text = point.label,
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedTrendPointSummary(
+    point: TrendPointUi,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(durationMillis = 240)),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+        ),
+    ) {
+        AnimatedContent(
+            targetState = point,
+            transitionSpec = {
+                (
+                    fadeIn(animationSpec = tween(durationMillis = 220)) +
+                        slideInVertically(
+                            animationSpec = tween(durationMillis = 260),
+                            initialOffsetY = { it / 3 },
+                        )
+                    ).togetherWith(
+                        fadeOut(animationSpec = tween(durationMillis = 140)) +
+                            slideOutVertically(
+                                animationSpec = tween(durationMillis = 180),
+                                targetOffsetY = { -it / 4 },
+                            )
+                    ).using(
+                        SizeTransform(clip = false)
+                    )
+            },
+            label = "selectedTrendPointSummary",
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = it.detailLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                BudgetValueText(
+                    text = formatCurrencyIraqiDinar(it.value),
+                    tone = BudgetValueTone.Card,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    unitLabel = "IQD",
+                )
             }
         }
     }
