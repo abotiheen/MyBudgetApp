@@ -9,6 +9,7 @@ import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
+import com.example.mybudgetapp.database.normalizedTransactionTitleKey
 import com.example.mybudgetapp.database.resolvedTransactionTitle
 import com.example.mybudgetapp.ui.screens.TotalIncomeDestination
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -148,7 +149,7 @@ fun List<BudgetTransaction>.toGroupedSpendingItems(
 ): List<SpendingItem> = this
     .groupBy { transaction ->
         SpendingItemGroupKey(
-            title = resolvedTransactionTitle(transaction.title, transaction.category, transaction.type),
+            title = normalizedTransactionTitleKey(transaction.title, transaction.category, transaction.type),
             category = transaction.category,
             type = transaction.type,
         )

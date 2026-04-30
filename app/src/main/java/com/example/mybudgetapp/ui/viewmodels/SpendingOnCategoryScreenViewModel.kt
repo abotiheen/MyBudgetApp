@@ -11,6 +11,7 @@ import com.example.mybudgetapp.data.formatCurrencyIraqiDinar
 import com.example.mybudgetapp.data.usableImagePath
 import com.example.mybudgetapp.database.BudgetTransaction
 import com.example.mybudgetapp.database.ItemRepository
+import com.example.mybudgetapp.database.normalizedTransactionTitleKey
 import com.example.mybudgetapp.database.resolvedTransactionTitle
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,7 +126,7 @@ fun List<BudgetTransaction>.toGroupedSpendingOnCategoryItems(
     month: Int,
 ): List<SpendingOnCategoryItem> = this
     .groupBy { transaction ->
-        resolvedTransactionTitle(transaction.title, transaction.category, transaction.type)
+        normalizedTransactionTitleKey(transaction.title, transaction.category, transaction.type)
     }
     .values
     .map { transactions ->

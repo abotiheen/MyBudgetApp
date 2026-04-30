@@ -3,6 +3,7 @@ package com.example.mybudgetapp.database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
+import java.util.Locale
 
 const val TRANSACTION_TYPE_EXPENSE = "expense"
 const val TRANSACTION_TYPE_INCOME = "income"
@@ -79,6 +80,9 @@ fun BudgetTransaction.displayTitle(): String {
 
 fun resolvedTransactionTitle(title: String?, category: String, type: String): String =
     title?.trim().takeUnless { it.isNullOrEmpty() } ?: defaultTransactionTitle(category, type)
+
+fun normalizedTransactionTitleKey(title: String?, category: String, type: String): String =
+    resolvedTransactionTitle(title, category, type).lowercase(Locale.ROOT)
 
 fun defaultTransactionTitle(category: String, type: String): String = DEFAULT_TRANSACTION_TITLE
 
