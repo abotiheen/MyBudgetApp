@@ -501,6 +501,7 @@ fun DashboardActivityCard(
     subtitle: String,
     items: List<HomeTransactionPreview>,
     onViewAll: () -> Unit,
+    onOpenTransaction: (HomeTransactionPreview) -> Unit,
 ) {
     Card(
         shape = RoundedCornerShape(BudgetTheme.radii.xl),
@@ -546,7 +547,10 @@ fun DashboardActivityCard(
                 )
             } else {
                 items.forEachIndexed { index, item ->
-                    DashboardActivityRow(item = item)
+                    DashboardActivityRow(
+                        item = item,
+                        onOpen = { onOpenTransaction(item) },
+                    )
                     if (index != items.lastIndex) {
                         Box(
                             modifier = Modifier
@@ -564,11 +568,13 @@ fun DashboardActivityCard(
 @Composable
 private fun DashboardActivityRow(
     item: HomeTransactionPreview,
+    onOpen: () -> Unit,
 ) {
     val accent = categoryAccentColor(item.categoryColorHex, item.categoryKey)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onOpen)
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

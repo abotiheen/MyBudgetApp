@@ -101,6 +101,7 @@ fun BudgetBackdrop(
 fun BottomNavigationBar(
     navigateToThisMonthScreen: () -> Unit,
     navigateToThisYearScreen: () -> Unit,
+    navigateToSpendingDistributionScreen: () -> Unit,
     navigateToCloudBackupScreen: () -> Unit,
     selectedItemIndex: Int,
 ) {
@@ -115,6 +116,7 @@ fun BottomNavigationBar(
             when (index) {
                 0 -> navigateToThisYearScreen()
                 1 -> navigateToThisMonthScreen()
+                2 -> navigateToSpendingDistributionScreen()
                 else -> navigateToCloudBackupScreen()
             }
         },

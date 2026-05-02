@@ -126,6 +126,9 @@ class ThisMonthScreenViewModel(
                         categoryColorHex = categoryDetails?.colorHex.orEmpty(),
                         amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
+                        type = transaction.type,
+                        year = period.year,
+                        month = period.month,
                     )
                 },
             )
@@ -233,4 +236,7 @@ data class HomeTransactionPreview(
     val categoryColorHex: String = "",
     val amount: String,
     val date: String,
+    val type: String,
+    val year: Int,
+    val month: Int,
 )

@@ -67,6 +67,7 @@ fun ThisMonthScreen(
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToInsights: (Int, Int) -> Unit,
     navigateToCategories: () -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val viewModel: ThisMonthScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
@@ -108,6 +109,7 @@ fun ThisMonthScreen(
                 navigateToTotalIncome = navigateToTotalIncome,
                 navigateToInsights = navigateToInsights,
                 navigateToCategories = navigateToCategories,
+                navigateToItemDates = navigateToItemDates,
             )
         }
 
@@ -147,6 +149,7 @@ fun ThisMonthScreenBody(
     navigateToTotalIncome: (Int, Int, Boolean) -> Unit,
     navigateToInsights: (Int, Int) -> Unit,
     navigateToCategories: () -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmount - uiState.totalSpendingAmount)
@@ -242,6 +245,15 @@ fun ThisMonthScreenBody(
                 items = uiState.recentTransactions,
                 onViewAll = {
                     navigateToTotalIncome(uiState.selectedMonth, uiState.selectedYear, false)
+                },
+                onOpenTransaction = { transaction ->
+                    navigateToItemDates(
+                        transaction.title,
+                        transaction.categoryKey,
+                        transaction.type,
+                        transaction.year,
+                        transaction.month,
+                    )
                 },
             )
         }

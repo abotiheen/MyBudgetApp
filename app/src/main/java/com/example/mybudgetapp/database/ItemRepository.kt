@@ -43,6 +43,12 @@ interface ItemRepository {
 
     fun getTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>>
     fun getTransactionsForYear(year: Int): Flow<List<BudgetTransaction>>
+    fun getExpenseTransactionsInRange(startDate: String, endDate: String): Flow<List<BudgetTransaction>>
+    fun getExpenseTransactionsByCategoriesInRange(
+        categories: List<String>,
+        startDate: String,
+        endDate: String,
+    ): Flow<List<BudgetTransaction>>
     fun getTransactionsByCategory(month: Int, year: Int, category: String): Flow<List<BudgetTransaction>>
     fun getTransactionsByCategoryForYear(year: Int, category: String): Flow<List<BudgetTransaction>>
     fun getIncomeTransactions(month: Int, year: Int): Flow<List<BudgetTransaction>>
