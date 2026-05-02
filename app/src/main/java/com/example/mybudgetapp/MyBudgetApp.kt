@@ -11,6 +11,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.mybudgetapp.ui.navigation.AppNavHost
 import com.example.mybudgetapp.ui.screens.CloudBackupDestination
+import com.example.mybudgetapp.ui.screens.SpendingDistributionDestination
 import com.example.mybudgetapp.ui.screens.ThisMonthDestination
 import com.example.mybudgetapp.ui.screens.ThisYearDestination
 import com.example.mybudgetapp.ui.widgets.BottomNavigationBar
@@ -24,6 +25,7 @@ fun MyBudgetApp (
     val rootRoutes = setOf(
         ThisYearDestination.route,
         ThisMonthDestination.route,
+        SpendingDistributionDestination.route,
         CloudBackupDestination.route,
     )
 
@@ -44,11 +46,13 @@ fun MyBudgetApp (
                 BottomNavigationBar(
                     navigateToThisMonthScreen = { navigateToRoot(ThisMonthDestination.route) },
                     navigateToThisYearScreen = { navigateToRoot(ThisYearDestination.route) },
+                    navigateToSpendingDistributionScreen = { navigateToRoot(SpendingDistributionDestination.route) },
                     navigateToCloudBackupScreen = { navigateToRoot(CloudBackupDestination.route) },
                     selectedItemIndex = when (currentRoute) {
                         ThisYearDestination.route -> 0
                         ThisMonthDestination.route -> 1
-                        CloudBackupDestination.route -> 2
+                        SpendingDistributionDestination.route -> 2
+                        CloudBackupDestination.route -> 3
                         else -> 1
                     },
                 )

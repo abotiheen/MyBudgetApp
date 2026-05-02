@@ -69,6 +69,7 @@ fun ThisYearScreen(
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToInsights: (Int) -> Unit,
     navigateToCategories: () -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val viewModel: ThisYearScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val uiState = viewModel.uiState.collectAsState()
@@ -110,6 +111,7 @@ fun ThisYearScreen(
                 navigateToTotalIncomeForYear = navigateToTotalIncomeForYear,
                 navigateToInsights = navigateToInsights,
                 navigateToCategories = navigateToCategories,
+                navigateToItemDates = navigateToItemDates,
             )
         }
 
@@ -149,6 +151,7 @@ fun ThisYearScreenBody(
     navigateToTotalIncomeForYear: (Int, Boolean) -> Unit,
     navigateToInsights: (Int) -> Unit,
     navigateToCategories: () -> Unit,
+    navigateToItemDates: (String, String, String, Int, Int) -> Unit,
 ) {
     val spacing = BudgetTheme.spacing
     val netBalance = formatCurrencyIraqiDinar(uiState.totalIncomeAmountForYear - uiState.totalSpendingAmountForYear)
@@ -268,6 +271,15 @@ fun ThisYearScreenBody(
                 subtitle = "A quick year-level preview of the most recent activity.",
                 items = uiState.recentTransactions,
                 onViewAll = { navigateToTotalIncomeForYear(uiState.selectedYear, false) },
+                onOpenTransaction = { transaction ->
+                    navigateToItemDates(
+                        transaction.title,
+                        transaction.categoryKey,
+                        transaction.type,
+                        transaction.year,
+                        transaction.month,
+                    )
+                },
             )
         }
     }

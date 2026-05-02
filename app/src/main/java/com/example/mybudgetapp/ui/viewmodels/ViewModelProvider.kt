@@ -82,6 +82,17 @@ object AppViewModelProvider {
                 this.createSavedStateHandle(),
             )
         }
+        initializer {
+            SpendingDistributionViewModel(
+                budgetApplication().container.itemRepository,
+            )
+        }
+        initializer {
+            SpendingDistributionTransactionsViewModel(
+                budgetApplication().container.itemRepository,
+                this.createSavedStateHandle(),
+            )
+        }
 
 
     }

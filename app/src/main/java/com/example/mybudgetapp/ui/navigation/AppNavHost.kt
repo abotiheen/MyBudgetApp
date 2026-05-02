@@ -26,6 +26,10 @@ import com.example.mybudgetapp.ui.screens.SpendingOnCategoryDestination
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryForYearDestination
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryScreen
 import com.example.mybudgetapp.ui.screens.SpendingOnCategoryScreenForYear
+import com.example.mybudgetapp.ui.screens.SpendingDistributionDestination
+import com.example.mybudgetapp.ui.screens.SpendingDistributionScreen
+import com.example.mybudgetapp.ui.screens.SpendingDistributionTransactionsDestination
+import com.example.mybudgetapp.ui.screens.SpendingDistributionTransactionsScreen
 import com.example.mybudgetapp.ui.screens.ThisMonthDestination
 import com.example.mybudgetapp.ui.screens.ThisMonthScreen
 import com.example.mybudgetapp.ui.screens.ThisYearDestination
@@ -34,6 +38,7 @@ import com.example.mybudgetapp.ui.screens.TotalIncomeDestination
 import com.example.mybudgetapp.ui.screens.TotalIncomeDestinationForYear
 import com.example.mybudgetapp.ui.screens.TotalIncomeScreen
 import com.example.mybudgetapp.ui.screens.TotalIncomeScreenForYear
+import com.example.mybudgetapp.ui.screens.createDistributionTransactionsRoute
 
 @Composable
 fun AppNavHost (
@@ -82,6 +87,17 @@ fun AppNavHost (
                 navigateToCategories = {
                     navController.navigate(CategoriesDestination.route)
                 },
+                navigateToItemDates = { title, category, type, year, month ->
+                    navController.navigate(
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
+                    )
+                },
             )
         }
 
@@ -110,10 +126,34 @@ fun AppNavHost (
                 navigateToCategories = {
                     navController.navigate(CategoriesDestination.route)
                 },
+                navigateToItemDates = { title, category, type, year, month ->
+                    navController.navigate(
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
+                    )
+                },
             )
         }
         composable(CloudBackupDestination.route) {
             CloudBackupScreen()
+        }
+        composable(SpendingDistributionDestination.route) {
+            SpendingDistributionScreen(
+                navigateToTransactions = { startDate, endDate, categoryIds ->
+                    navController.navigate(
+                        createDistributionTransactionsRoute(
+                            startDate = startDate,
+                            endDate = endDate,
+                            categoryIds = categoryIds,
+                        )
+                    )
+                }
+            )
         }
         composable(CategoriesDestination.route) {
             CategoriesScreen(
@@ -266,6 +306,35 @@ fun AppNavHost (
                         )
                     )
                 }
+            )
+        }
+        composable(
+            route = SpendingDistributionTransactionsDestination.routeWithArgs,
+            arguments = listOf(
+                navArgument(SpendingDistributionTransactionsDestination.startDate) {
+                    type = NavType.StringType
+                },
+                navArgument(SpendingDistributionTransactionsDestination.endDate) {
+                    type = NavType.StringType
+                },
+                navArgument(SpendingDistributionTransactionsDestination.categoryKeys) {
+                    type = NavType.StringType
+                },
+            )
+        ) {
+            SpendingDistributionTransactionsScreen(
+                navigateBack = { navController.navigateUp() },
+                navigateToItemDates = { title, category, type, year, month ->
+                    navController.navigate(
+                        ItemDatesScreenNavigationDestination.createRoute(
+                            title = title,
+                            category = category,
+                            type = type,
+                            year = year,
+                            month = month,
+                        )
+                    )
+                },
             )
         }
         composable(

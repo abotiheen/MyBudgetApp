@@ -25,6 +25,12 @@ object NavigationItems {
             hasNews = false,
         ),
         BottomNavigationItem(
+            title = "Distribution",
+            selectedIcon = R.drawable.baseline_pie_chart_24,
+            unSelectedIcon = R.drawable.outline_pie_chart_24,
+            hasNews = false,
+        ),
+        BottomNavigationItem(
             title = "Vault",
             selectedIcon = R.drawable.baseline_settings_24,
             unSelectedIcon = R.drawable.outline_settings_24,

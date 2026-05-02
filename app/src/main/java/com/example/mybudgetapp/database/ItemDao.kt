@@ -107,6 +107,36 @@ interface TransactionDao {
 
     @Query(
         """
+        select * from transactions
+        where type = :type
+          and transactionDate between :startDate and :endDate
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsByTypeInRange(
+        type: String,
+        startDate: String,
+        endDate: String,
+    ): Flow<List<BudgetTransaction>>
+
+    @Query(
+        """
+        select * from transactions
+        where type = :type
+          and category in (:categories)
+          and transactionDate between :startDate and :endDate
+        order by transactionDate desc, transactionId desc
+        """
+    )
+    fun getTransactionsByTypeAndCategoriesInRange(
+        type: String,
+        categories: List<String>,
+        startDate: String,
+        endDate: String,
+    ): Flow<List<BudgetTransaction>>
+
+    @Query(
+        """
         select title, category, amount, type
         from transactions
         order by transactionDate desc, transactionId desc

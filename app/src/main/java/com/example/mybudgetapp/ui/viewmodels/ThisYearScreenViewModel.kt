@@ -110,6 +110,9 @@ class ThisYearScreenViewModel(
                         categoryColorHex = categoryDetails?.colorHex.orEmpty(),
                         amount = formatCompactCurrencyIraqiDinar(transaction.amount),
                         date = transaction.transactionDate,
+                        type = transaction.type,
+                        year = currentYear,
+                        month = 0,
                     )
                 },
             )

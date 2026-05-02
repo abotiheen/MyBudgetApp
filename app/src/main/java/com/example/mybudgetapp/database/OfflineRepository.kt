@@ -144,6 +144,25 @@ class OfflineRepository(
     override fun getTransactionsForYear(year: Int): Flow<List<BudgetTransaction>> =
         transactionDao.getTransactionsByTypeForYear(year, TRANSACTION_TYPE_EXPENSE)
 
+    override fun getExpenseTransactionsInRange(startDate: String, endDate: String): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByTypeInRange(
+            type = TRANSACTION_TYPE_EXPENSE,
+            startDate = startDate,
+            endDate = endDate,
+        )
+
+    override fun getExpenseTransactionsByCategoriesInRange(
+        categories: List<String>,
+        startDate: String,
+        endDate: String,
+    ): Flow<List<BudgetTransaction>> =
+        transactionDao.getTransactionsByTypeAndCategoriesInRange(
+            type = TRANSACTION_TYPE_EXPENSE,
+            categories = categories,
+            startDate = startDate,
+            endDate = endDate,
+        )
+
     override fun getTransactionsByCategory(month: Int, year: Int, category: String): Flow<List<BudgetTransaction>> =
         transactionDao.getTransactionsByCategory(month, year, category)
 
